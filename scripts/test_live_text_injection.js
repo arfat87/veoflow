@@ -82,15 +82,24 @@ async function testLiveTextInjection() {
   assert.strictEqual(injectResp.success, true, 'inject_text must report success');
   console.log('Injection Result:', JSON.stringify(injectResp));
 
-  // 5. Update Audit Transaction
+  // 5. Update Audit Transaction matching helper response and InjectionManager semantics
+  let finalStatus = TRANSACTION_STATUSES.FAILED;
+  if (injectResp.verified) {
+    finalStatus = TRANSACTION_STATUSES.VERIFIED;
+  } else if (injectResp.success) {
+    finalStatus = TRANSACTION_STATUSES.UNVERIFIED;
+  }
+
   tracker.updateTransaction(tx.id, {
-    status: injectResp.verified ? TRANSACTION_STATUSES.VERIFIED : TRANSACTION_STATUSES.INSERTED,
+    status: finalStatus,
     strategy: injectResp.strategy,
-    verified: injectResp.verified
+    verified: !!injectResp.verified,
+    clipboardRestored: !!injectResp.clipboardRestored
   });
 
   const finalTx = tracker.getTransaction(tx.id);
-  assert.ok(finalTx.status === TRANSACTION_STATUSES.VERIFIED || finalTx.status === TRANSACTION_STATUSES.INSERTED);
+  assert.strictEqual(finalTx.status, TRANSACTION_STATUSES.UNVERIFIED);
+  assert.strictEqual(finalTx.clipboardRestored, true);
   console.log('Audited Transaction Final State:', JSON.stringify(finalTx));
 
   // 6. Test Shutdown

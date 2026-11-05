@@ -89,7 +89,7 @@ namespace VeoFlow.Helper
                         Thread.Sleep(50);
                         currentHwnd = NativeMethods.GetForegroundWindow();
 
-                        if (currentHwnd.ToInt64() != targetVal)
+                        if (currentHwnd != IntPtr.Zero && currentHwnd.ToInt64() != targetVal)
                         {
                             result.Status = "target_mismatch";
                             result.ErrorMessage = "Foreground window mismatch: target window could not be activated";
@@ -103,7 +103,8 @@ namespace VeoFlow.Helper
             string chosenStrategy = (strategy ?? "auto").ToLower();
             if (chosenStrategy == "uia" || chosenStrategy == "auto")
             {
-                bool uiaSuccess = TryUiaDirectInsertion(text, ref result);
+                IntPtr targetPtr = targetVal != 0 ? new IntPtr(targetVal) : IntPtr.Zero;
+                bool uiaSuccess = TryUiaDirectInsertion(text, targetPtr, ref result);
                 if (uiaSuccess)
                 {
                     return result;
@@ -123,16 +124,38 @@ namespace VeoFlow.Helper
             return result;
         }
 
-        private static bool TryUiaDirectInsertion(string text, ref InjectionResult result)
+        private static bool TryUiaDirectInsertion(string text, IntPtr targetPtr, ref InjectionResult result)
         {
             bool success = false;
             try
             {
-                AutomationElement focused = AutomationElement.FocusedElement;
-                if (focused != null)
+                AutomationElement targetElement = null;
+                if (targetPtr != IntPtr.Zero)
+                {
+                    try
+                    {
+                        var root = AutomationElement.FromHandle(targetPtr);
+                        if (root != null)
+                        {
+                            var cond = new OrCondition(
+                                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document),
+                                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)
+                            );
+                            targetElement = root.FindFirst(TreeScope.Descendants, cond) ?? root;
+                        }
+                    }
+                    catch { }
+                }
+
+                if (targetElement == null)
+                {
+                    targetElement = AutomationElement.FocusedElement;
+                }
+
+                if (targetElement != null)
                 {
                     object valPatternObj;
-                    if (focused.TryGetCurrentPattern(ValuePattern.Pattern, out valPatternObj))
+                    if (targetElement.TryGetCurrentPattern(ValuePattern.Pattern, out valPatternObj))
                     {
                         ValuePattern valPattern = (ValuePattern)valPatternObj;
                         string currentVal = valPattern.Current.Value ?? "";
