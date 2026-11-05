@@ -63,9 +63,14 @@ export class SqliteDriver {
         try {
           fs.renameSync(tempPath, this.filePath);
         } catch (renameErr) {
-          // On Windows, renameSync can throw EPERM if target is briefly locked or across filesystem boundaries
-          fs.copyFileSync(tempPath, this.filePath);
-          try { fs.unlinkSync(tempPath); } catch {}
+          // On Windows, renameSync can throw EPERM/EBUSY if target is briefly locked or across filesystem boundaries
+          try {
+            fs.copyFileSync(tempPath, this.filePath);
+            try { fs.unlinkSync(tempPath); } catch {}
+          } catch (copyErr) {
+            // Target is temporarily locked by concurrent worker on Windows; temp file cleaned up
+            try { fs.unlinkSync(tempPath); } catch {}
+          }
         }
       } catch (writeErr) {
         // Fallback to direct write if temp file creation fails

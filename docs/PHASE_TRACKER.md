@@ -8,29 +8,31 @@
 
 ## 1. Roadmap Phase Overview
 
-| Phase | Description | Current Status | Gate Dependency |
-| :---: | :--- | :---: | :--- |
-| **Phase 01** | Project Foundation & Core Architecture | `COMPLETE` | Passed all 14 Acceptance Gates |
-| **Phase 02** | Native Windows Helper Implementation | `COMPLETE` | Passed all 6 Tasks & Live Tests |
-| **Phase 03** | Audio Recording Engine | `COMPLETE` | Passed all 16 Tasks & Fixture Tests |
-| **Phase 04** | AI Speech Recognition Providers | `COMPLETE` | Passed all Provider Adapters & Tests |
-| **Phase 05** | Application Context Detection Engine | `COMPLETE` | Passed all Classification, Privacy & Security Tests |
-| **Phase 06** | Contextual AI Formatter & Instruction Mode | `COMPLETE` | Passed all Formatter, Mode, Directive & Validation Tests |
-| **Phase 07** | Smart Text Injection Engine & Verification | `COMPLETE` | Passed all Target, UIA, Clipboard & Live Tests |
-| **Phase 08** | Floating HUD & Desktop Interface | `COMPLETE` | Passed HUD, Visualizer, 7 Settings Screens & Tray Tests |
-| **Phase 09** | SQLite Database & Local Persistence | `COMPLETE` | Passed all 6 Schema Modules, Migrations, Drivers & Tests |
-| **Phase 10** | Security Hardening & DPAPI Credentials | `READY FOR IMPLEMENTATION` | Phase 09 Gate |
-| **Phase 11** | Quality Assurance, E2E & Benchmarking | `BLOCKED` | Phase 10 Gate |
-| **Phase 12** | Production Packaging, NSIS & Release | `BLOCKED` | Phase 11 Gate |
+|    Phase     | Description                                |       Current Status       | Gate Dependency                                                  |
+| :----------: | :----------------------------------------- | :------------------------: | :--------------------------------------------------------------- |
+| **Phase 01** | Project Foundation & Core Architecture     |         `COMPLETE`         | Passed all 14 Acceptance Gates                                   |
+| **Phase 02** | Native Windows Helper Implementation       |         `COMPLETE`         | Passed all 6 Tasks & Live Tests                                  |
+| **Phase 03** | Audio Recording Engine                     |         `COMPLETE`         | Passed all 16 Tasks & Fixture Tests                              |
+| **Phase 04** | AI Speech Recognition Providers            |         `COMPLETE`         | Passed all Provider Adapters & Tests                             |
+| **Phase 05** | Application Context Detection Engine       |         `COMPLETE`         | Passed all Classification, Privacy & Security Tests              |
+| **Phase 06** | Contextual AI Formatter & Instruction Mode |         `COMPLETE`         | Passed all Formatter, Mode, Directive & Validation Tests         |
+| **Phase 07** | Smart Text Injection Engine & Verification |         `COMPLETE`         | Passed all Target, UIA, Clipboard & Live Tests                   |
+| **Phase 08** | Floating HUD & Desktop Interface           |         `COMPLETE`         | Passed HUD, Visualizer, 7 Settings Screens & Tray Tests          |
+| **Phase 09** | SQLite Database & Local Persistence        |         `COMPLETE`         | Passed all 6 Schema Modules, Migrations, Drivers & Tests         |
+| **Phase 10** | Security Hardening & DPAPI Credentials     |         `COMPLETE`         | Passed Security Audit, DPAPI, Log Redaction, IPC & Privacy Gates |
+| **Phase 11** | Quality Assurance, E2E & Benchmarking      | `READY FOR IMPLEMENTATION` | Phase 10 Gate                                                    |
+| **Phase 12** | Production Packaging, NSIS & Release       |         `BLOCKED`          | Phase 11 Gate                                                    |
 
 ---
 
 ## 2. Phase 04: AI Speech Recognition Providers (Completed)
 
 ### Target Deliverable
+
 A modular, provider-independent speech recognition engine supporting Groq Whisper Large v3 Turbo, OpenAI Whisper, and Google Gemini multimodal transcription with normalized errors, automatic/manual language detection, latency measurement, and user-consented fallback.
 
 ### Tasks Checklist
+
 - [x] Implement common provider interface (`AIProvider` in `app/core/providers/base-provider.js`).
 - [x] Create Groq Whisper adapter (`whisper-large-v3-turbo` in `app/core/providers/groq-provider.js`).
 - [x] Create OpenAI Whisper adapter (`whisper-1` in `app/core/providers/openai-provider.js`).
@@ -54,9 +56,11 @@ A modular, provider-independent speech recognition engine supporting Groq Whispe
 ## 3. Phase 05: Application Context Detection Engine (Completed)
 
 ### Target Deliverable
+
 A robust, privacy-first application context engine that extracts active target application metadata from `VeoFlowHelper.exe`, enforces strict privacy boundaries, sanitizes untrusted context to prevent LLM prompt injection, classifies applications into semantic categories (`code_editor`, `terminal`, `chat`, `email`, `document`, `browser_form`, `unknown`), tracks target window handles to prevent misdirected text injection, and supports user-defined custom classification rules.
 
 ### Tasks Checklist
+
 - [x] Ingest native helper active-window context (`hwnd`, `appName`, `processId`, `processPath`, `windowTitle`, `url`, `textbox`).
 - [x] Implement semantic application classifier (`AppClassifier` in `app/core/context/app-classifier.js`).
 - [x] Classify into designated categories:
@@ -89,9 +93,11 @@ A robust, privacy-first application context engine that extracts active target a
 ## 4. Phase 06: Contextual AI Formatter & Instruction Mode (Completed)
 
 ### Target Deliverable
+
 A provider-independent AI formatting engine that shapes raw speech into application-specific text, executes voice directives (translation, grammar correction, bullet points, rephrasing), preserves technical terminology without inventing facts, enforces terminal safety (never generating executable commands from literal speech), validates model outputs, expands voice snippets, and performs injection-safe custom dictionary replacements.
 
 ### Tasks Checklist
+
 - [x] Create provider-independent formatting interface (`BaseFormatter` in `app/core/formatting/base-formatter.js`).
 - [x] Implement Gemini formatter adapter (`GeminiFormatter` in `app/core/formatting/gemini-formatter.js` with zero-thought budget).
 - [x] Implement Groq LLM formatter adapter (`GroqFormatter` in `app/core/formatting/groq-formatter.js` with multi-model fallback).
@@ -128,9 +134,11 @@ A provider-independent AI formatting engine that shapes raw speech into applicat
 ## 5. Phase 07: Smart Text Injection Engine & Verification (Completed)
 
 ### Target Deliverable
+
 A production-grade text insertion engine that revalidates active target window handles, supports non-destructive UI Automation and safe clipboard fallback, audits every operation via cryptographic hash transactions (`pending`, `inserted`, `verified`, `unverified`, `failed`, `cancelled`), strictly prevents reporting unverified pastes as verified, guarantees complete clipboard restoration when the temporary payload is consumed, preserves unrelated user clipboard modifications, and passes live Notepad insertion integration tests.
 
 ### Tasks Checklist
+
 - [x] Implement target management:
   - Capture original foreground window (`hwnd`, `appName`, `processId`, `windowTitle`, `controlType`).
   - Revalidate target window before insertion ([`TargetManager`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/core/injection/target-manager.js)).
@@ -166,9 +174,11 @@ A production-grade text insertion engine that revalidates active target window h
 ## 6. Phase 08: Floating HUD & Desktop Interface (Completed)
 
 ### Target Deliverable
+
 A production-quality desktop interface featuring a frameless, transparent, always-on-top, draggable floating HUD pill that never steals focus from target applications (`focusable: false`, `showInactive()`), a 60 FPS High-DPI canvas audio visualizer with smooth cyan gradient waveform, a complete 7-section Settings & Dashboard window (Dashboard, AI Providers, Dictation History, General & Audio, Custom Dictionary, Voice Snippets, Privacy Controls & App Rules), and an expanded system tray menu with all 5 required actions.
 
 ### Tasks Checklist
+
 - [x] Task 1: Floating HUD:
   - Frameless, transparent, obsidian glassmorphism (`#0B0F17`, `rgba(11, 15, 23, 0.92)`).
   - Draggable via `-webkit-app-region: drag` with persistent position (`hud_x`, `hud_y`).
@@ -203,9 +213,11 @@ A production-quality desktop interface featuring a frameless, transparent, alway
 ## 7. Phase 09: SQLite Database & Local Persistence (Completed)
 
 ### Target Deliverable
+
 A complete, production-grade local persistence engine powered by official SQLite WebAssembly (`sql.js`) with atomic file persistence (`~/.veoflow/veoflow.sqlite`), versioned schema migrations, foreign keys and indexes, full history search/filter/export (JSON/CSV) and retry paste actions, prioritized and case-sensitive custom vocabulary with recursive replacement protection, voice snippets with usage metrics and test expansion, provider configurations, retention policy enforcement, and live database backup/restore.
 
 ### Tasks Checklist
+
 - [x] SQLite Database Driver (`SqliteDriver` in [`app/database/sqlite-driver.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/database/sqlite-driver.js)):
   - WebAssembly runtime (`sql.js`) requiring zero native C++ compilation tools.
   - Synchronous query execution, prepared statements, and atomic disk persistence.
@@ -244,4 +256,47 @@ A complete, production-grade local persistence engine powered by official SQLite
   - 5/5 tests passing in [`tests/unit/database.test.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/tests/unit/database.test.js).
   - Total automated test suite: 140/140 Vitest tests + 7/7 native C# tests (147/147 total) passing.
 
+---
 
+## 8. Phase 10: Security and Privacy Hardening (Completed)
+
+### Target Deliverable
+
+A comprehensive security and privacy hardening cycle establishing Windows DPAPI-backed encryption for API keys and secrets via Electron's `safeStorage`, strict zero-secret exposure to the renderer process, automated secret redaction in application logs, origin and frame validation on all IPC handlers, strict Content Security Policy (`connect-src 'none'`), bounded message buffers and parameter sanitization in the native Win32 helper, unified privacy settings with disabled-by-default browser URL capture, complete file unlinking on history wipe, and formal STRIDE threat modeling.
+
+### Tasks Checklist
+
+- [x] Windows DPAPI Credential Protection ([`app/security/credential-manager.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/security/credential-manager.js)):
+  - Built `CredentialManager` backed by Windows DPAPI via Electron's `safeStorage.encryptString()` and `decryptString()`.
+  - Implemented AES-256-GCM machine-bound fallback for headless test runners.
+  - Masked key representation (`••••••••1234`) ensuring raw secrets are never sent to renderer.
+  - Dedicated zero-secret IPC handlers (`get-api-key-status`, `save-api-key`, `clear-api-key`).
+- [x] Automatic Secret Redaction in Structured Logger ([`app/shared/logger.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/shared/logger.js)):
+  - Recursive scrubbing of Google Gemini (`AIza...`), Groq (`gsk_...`), OpenAI (`sk-...`), Anthropic (`sk-ant-...`), and Bearer tokens.
+  - Replaces sensitive object fields (`api_key`, `apiKey`, `password`, `secret`, `authorization`, `token`) with `[REDACTED_SECRET]`.
+- [x] Electron Hardening & Security Policies ([`app/main/lifecycle.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/main/lifecycle.js)):
+  - Enforced `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, `webSecurity: true`.
+  - Injected hardened Content Security Policy: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none';`.
+  - Blocked unauthorized remote navigation (`will-navigate: preventDefault()`), popups (`setWindowOpenHandler: deny`), and webviews (`will-attach-webview: preventDefault()`).
+  - Strict media permission filter verifying local `file://` origin before granting microphone access.
+- [x] IPC Sender Validation ([`app/main/ipc/index.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/main/ipc/index.js)):
+  - Implemented `validateIpcSender()` to verify `event.senderFrame` exists and originates from authorized local HTML files (`overlay.html` and `settings.html`).
+  - Wrapped all IPC handlers in `secureHandle()`.
+- [x] Native Helper Security Hardening ([`helper/src/Program.cs`](file:///c:/MY_ALL_ITEM/rea/veoflow/helper/src/Program.cs)):
+  - Enforced `MAX_LINE_LENGTH = 1 MB` on stdin IPC listener to prevent memory exhaustion DoS.
+  - Enforced `MAX_INJECTION_TEXT_LENGTH = 500,000` character ceiling on text insertion.
+  - Sanitized HWND (32 chars) and transaction IDs (128 chars).
+  - Restricted insertion strategies to allowlist (`auto`, `uia`, `clipboard_paste`, `send_input_unicode`).
+  - Added unit tests in `helper/tests/HelperProtocolTests.cs` (9/9 C# unit tests passing).
+- [x] Privacy Defaults & Data Minimization:
+  - Resolved settings key discrepancy in [`ContextEngine.getPrivacyPolicy()`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/core/context/context-engine.js).
+  - Hardened default: Browser URL capture changed to **disabled by default** (`privacy_allow_browser_url: 'false'`).
+  - Updated `clearHistory()` to physically unlink temporary audio recordings from `~/.veoflow/recordings/`.
+  - Zero screenshot capture capability verified across entire codebase.
+- [x] Security Audit & Documentation:
+  - Created [`docs/SECURITY_AUDIT.md`](file:///c:/MY_ALL_ITEM/rea/veoflow/docs/SECURITY_AUDIT.md) with CVSS classifications for all 9 findings.
+  - Created [`docs/PRIVACY_DATA_FLOW.md`](file:///c:/MY_ALL_ITEM/rea/veoflow/docs/PRIVACY_DATA_FLOW.md) with detailed Mermaid diagrams and privacy boundaries.
+  - Created [`docs/THREAT_MODEL.md`](file:///c:/MY_ALL_ITEM/rea/veoflow/docs/THREAT_MODEL.md) with STRIDE matrix across all trust boundaries.
+- [x] Automated Test Harness:
+  - 15/15 tests passing in [`tests/unit/security_hardening.test.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/tests/unit/security_hardening.test.js).
+  - Total automated test suite: 155/155 Vitest tests + 9/9 native C# tests (164/164 total) passing.

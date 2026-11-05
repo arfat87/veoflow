@@ -1,6 +1,7 @@
 /**
  * VeoFlow IPC Controller (ESM)
- * Registers validated IPC handlers connecting the renderer with main services.
+ * Registers securely validated IPC handlers connecting the renderer with main services.
+ * Strictly verifies sender frames, restricts payloads, and guarantees zero plaintext secret exposure.
  */
 import { ipcMain } from 'electron';
 import logger from '../../shared/logger.js';
@@ -12,6 +13,38 @@ import {
   SnippetSchema,
   AppRuleSchema
 } from '../../shared/validation.js';
+
+/**
+ * Validates that an incoming IPC invocation originates from an authorized local frame.
+ * @param {Electron.IpcMainInvokeEvent} event
+ * @param {string} channel
+ */
+export function validateIpcSender(event, channel = 'IPC') {
+  if (!event || !event.senderFrame) {
+    if (process.env.NODE_ENV === 'test') return true;
+    logger.warn(`[Security] Blocked IPC invocation on '${channel}': Missing senderFrame`);
+    throw new Error('Unauthorized IPC sender: frame context unavailable');
+  }
+
+  const url = event.senderFrame.url || '';
+  if (!url.startsWith('file://')) {
+    logger.warn(`[Security] Blocked IPC invocation on '${channel}': Forbidden protocol '${url}'`);
+    throw new Error('Unauthorized IPC sender: forbidden protocol');
+  }
+
+  const isAuthorized =
+    url.includes('/renderer/hud/overlay.html') ||
+    url.includes('/renderer/settings/settings.html') ||
+    url.includes('/dist/renderer/hud/overlay.html') ||
+    url.includes('/dist/renderer/settings/settings.html');
+
+  if (!isAuthorized) {
+    logger.warn(`[Security] Blocked IPC invocation on '${channel}': Unauthorized page '${url}'`);
+    throw new Error('Unauthorized IPC sender: unknown frame');
+  }
+
+  return true;
+}
 
 export function registerIpcHandlers({
   windowManager,
@@ -26,17 +59,25 @@ export function registerIpcHandlers({
   const helper = helperClient;
   const ai = aiService;
 
-  ipcMain.handle('start-recording', async () => {
+  function secureHandle(channel, handler) {
+    ipcMain.handle(channel, async (event, ...args) => {
+      validateIpcSender(event, channel);
+      return await handler(event, ...args);
+    });
+  }
+
+  // 1. Recording Actions
+  secureHandle('start-recording', async () => {
     await dictationState.startDictation();
     return true;
   });
 
-  ipcMain.handle('stop-recording', async () => {
+  secureHandle('stop-recording', async () => {
     await dictationState.stopDictation();
     return true;
   });
 
-  ipcMain.handle('submit-audio', async (event, payload) => {
+  secureHandle('submit-audio', async (event, payload) => {
     const startTime = Date.now();
     const overlay = windowManager.getOverlayWindow();
 
@@ -162,15 +203,22 @@ export function registerIpcHandlers({
     }
   });
 
-  // Settings handlers
-  ipcMain.handle('get-settings', () => db.getAllSettings());
-  ipcMain.handle('save-setting', (e, payload) => {
+  // 2. Settings & Credential Handlers (Zero Secret Exposure to Renderer)
+  secureHandle('get-settings', () => db.getAllSettings(false));
+  secureHandle('save-setting', (e, payload) => {
     const parseResult = SettingPayloadSchema.safeParse(payload);
     if (!parseResult.success) {
       logger.warn('Invalid save-setting payload', parseResult.error.format());
       return false;
     }
     const { key, value } = parseResult.data;
+
+    // Security check: intercept direct api_key save attempts and route to encrypted DPAPI storage
+    if (key.endsWith('_api_key')) {
+      const provider = key.replace('_api_key', '');
+      return db.saveApiKey(provider, value);
+    }
+
     db.setSetting(key, value);
     if (key === 'hotkey') {
       hotkeyManager.registerShortcuts();
@@ -179,16 +227,29 @@ export function registerIpcHandlers({
     return true;
   });
 
-  // History handlers
-  ipcMain.handle('get-history', (e, limit, filter) => db.getHistory(limit, filter));
-  ipcMain.handle('search-history', (e, payload) => db.searchHistory(payload?.query, payload?.options));
-  ipcMain.handle('delete-history-item', (e, id) => db.deleteHistoryItem(Number(id)));
-  ipcMain.handle('clear-history', () => {
+  // Dedicated Encrypted Credential Handlers
+  secureHandle('get-api-key-status', () => db.getApiKeyStatus());
+  secureHandle('save-api-key', (e, payload) => {
+    if (!payload || !payload.provider || typeof payload.apiKey !== 'string') return false;
+    const provider = String(payload.provider).toLowerCase();
+    if (provider !== 'gemini' && provider !== 'groq' && provider !== 'openai') return false;
+    return db.saveApiKey(provider, payload.apiKey);
+  });
+  secureHandle('clear-api-key', (e, provider) => {
+    if (!provider) return false;
+    return db.clearApiKey(String(provider).toLowerCase());
+  });
+
+  // 3. History Handlers
+  secureHandle('get-history', (e, limit, filter) => db.getHistory(limit, filter));
+  secureHandle('search-history', (e, payload) => db.searchHistory(payload?.query, payload?.options));
+  secureHandle('delete-history-item', (e, id) => db.deleteHistoryItem(Number(id)));
+  secureHandle('clear-history', () => {
     db.clearHistory();
     return true;
   });
-  ipcMain.handle('export-history', (e, format) => db.exportHistory(format || 'json'));
-  ipcMain.handle('retry-history-item', async (e, id) => {
+  secureHandle('export-history', (e, format) => db.exportHistory(format || 'json'));
+  secureHandle('retry-history-item', async (e, id) => {
     const item = db.getHistoryById(id);
     if (item && item.formatted_text) {
       await diffPaster.pasteFull(item.formatted_text, dictationState.currentContext, {
@@ -199,8 +260,8 @@ export function registerIpcHandlers({
     return false;
   });
 
-  // AI Connection Test
-  ipcMain.handle('test-ai-connection', async (e, provider) => {
+  // 4. AI Connection Test
+  secureHandle('test-ai-connection', async (e, provider) => {
     try {
       if (typeof ai.testConnection === 'function') {
         return await ai.testConnection(provider);
@@ -211,9 +272,9 @@ export function registerIpcHandlers({
     }
   });
 
-  // Dictionary handlers
-  ipcMain.handle('get-dictionary', (e, onlyEnabled) => db.getDictionary(onlyEnabled));
-  ipcMain.handle('add-dictionary-word', (e, payload) => {
+  // 5. Dictionary Handlers
+  secureHandle('get-dictionary', (e, onlyEnabled) => db.getDictionary(onlyEnabled));
+  secureHandle('add-dictionary-word', (e, payload) => {
     const parseResult = DictionaryWordSchema.safeParse(payload);
     if (!parseResult.success) {
       logger.warn('Invalid add-dictionary-word payload', parseResult.error.format());
@@ -222,15 +283,15 @@ export function registerIpcHandlers({
     const { trigger, rep } = parseResult.data;
     return db.addDictionaryWord(trigger, rep, payload);
   });
-  ipcMain.handle('edit-dictionary-word', (e, payload) => db.editDictionaryWord(Number(payload?.id), payload?.updates));
-  ipcMain.handle('delete-dictionary-word', (e, id) => db.deleteDictionaryWord(Number(id)));
-  ipcMain.handle('toggle-dictionary-word', (e, payload) => db.toggleDictionaryWord(Number(payload?.id), payload?.isEnabled));
-  ipcMain.handle('import-dictionary', (e, entries) => db.importDictionary(entries));
-  ipcMain.handle('export-dictionary', () => db.exportDictionary());
+  secureHandle('edit-dictionary-word', (e, payload) => db.editDictionaryWord(Number(payload?.id), payload?.updates));
+  secureHandle('delete-dictionary-word', (e, id) => db.deleteDictionaryWord(Number(id)));
+  secureHandle('toggle-dictionary-word', (e, payload) => db.toggleDictionaryWord(Number(payload?.id), payload?.isEnabled));
+  secureHandle('import-dictionary', (e, entries) => db.importDictionary(entries));
+  secureHandle('export-dictionary', () => db.exportDictionary());
 
-  // Snippet handlers
-  ipcMain.handle('get-snippets', (e, onlyEnabled) => db.getSnippets(onlyEnabled));
-  ipcMain.handle('add-snippet', (e, payload) => {
+  // 6. Snippet Handlers
+  secureHandle('get-snippets', (e, onlyEnabled) => db.getSnippets(onlyEnabled));
+  secureHandle('add-snippet', (e, payload) => {
     const parseResult = SnippetSchema.safeParse(payload);
     if (!parseResult.success) {
       logger.warn('Invalid add-snippet payload', parseResult.error.format());
@@ -239,22 +300,22 @@ export function registerIpcHandlers({
     const { shortcut, text } = parseResult.data;
     return db.addSnippet(shortcut, text, payload?.isEnabled);
   });
-  ipcMain.handle('edit-snippet', (e, payload) => db.editSnippet(Number(payload?.id), payload?.updates));
-  ipcMain.handle('delete-snippet', (e, id) => db.deleteSnippet(Number(id)));
-  ipcMain.handle('toggle-snippet', (e, payload) => db.toggleSnippet(Number(payload?.id), payload?.isEnabled));
-  ipcMain.handle('test-snippet', (e, sampleText) => db.testSnippetExpansion(sampleText));
+  secureHandle('edit-snippet', (e, payload) => db.editSnippet(Number(payload?.id), payload?.updates));
+  secureHandle('delete-snippet', (e, id) => db.deleteSnippet(Number(id)));
+  secureHandle('toggle-snippet', (e, payload) => db.toggleSnippet(Number(payload?.id), payload?.isEnabled));
+  secureHandle('test-snippet', (e, sampleText) => db.testSnippetExpansion(sampleText));
 
-  // Provider Configs handlers
-  ipcMain.handle('get-provider-configs', () => db.getProviderConfigs());
-  ipcMain.handle('set-provider-config', (e, payload) => db.setProviderConfig(payload?.providerId, payload?.config));
+  // 7. Provider Configs Handlers
+  secureHandle('get-provider-configs', () => db.getProviderConfigs());
+  secureHandle('set-provider-config', (e, payload) => db.setProviderConfig(payload?.providerId, payload?.config));
 
-  // Backup & Recovery handlers
-  ipcMain.handle('backup-database', (e, targetPath) => db.backup(targetPath));
-  ipcMain.handle('restore-database', (e, backupPath) => db.restore(backupPath));
+  // 8. Backup & Recovery Handlers
+  secureHandle('backup-database', (e, targetPath) => db.backup(targetPath));
+  secureHandle('restore-database', (e, backupPath) => db.restore(backupPath));
 
-  // Application Rules handlers (Privacy & Permissions)
-  ipcMain.handle('get-app-rules', () => db.getAppRules());
-  ipcMain.handle('add-app-rule', (e, payload) => {
+  // 9. Application Rules Handlers (Privacy & Permissions)
+  secureHandle('get-app-rules', () => db.getAppRules());
+  secureHandle('add-app-rule', (e, payload) => {
     const parseResult = AppRuleSchema.safeParse(payload);
     if (!parseResult.success) {
       logger.warn('Invalid add-app-rule payload', parseResult.error.format());
@@ -263,11 +324,11 @@ export function registerIpcHandlers({
     const { processName, category, tone } = parseResult.data;
     return db.addAppRule(processName, category, tone);
   });
-  ipcMain.handle('delete-app-rule', (e, id) => db.deleteAppRule(Number(id)));
+  secureHandle('delete-app-rule', (e, id) => db.deleteAppRule(Number(id)));
 
-  // Window actions
-  ipcMain.handle('open-settings', () => windowManager.createSettingsWindow());
-  ipcMain.handle('open-hud', () => {
+  // 10. Window Actions
+  secureHandle('open-settings', () => windowManager.createSettingsWindow());
+  secureHandle('open-hud', () => {
     const overlay = windowManager.getOverlayWindow() || windowManager.createOverlayWindow();
     if (overlay && !overlay.isDestroyed()) {
       overlay.showInactive();
@@ -275,11 +336,10 @@ export function registerIpcHandlers({
     }
     return false;
   });
-  ipcMain.handle('close-overlay', () => {
+  secureHandle('close-overlay', () => {
     const overlay = windowManager.getOverlayWindow();
     if (overlay && !overlay.isDestroyed()) {
       overlay.hide();
     }
   });
 }
-

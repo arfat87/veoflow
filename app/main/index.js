@@ -2,7 +2,9 @@
  * VeoFlow Desktop Application Bootstrap (ESM)
  * Master Electron Main Process entry point.
  */
+import * as electron from 'electron';
 import { app, BrowserWindow } from 'electron';
+import { setElectronModule } from '../security/credential-manager.js';
 import { WindowManager } from './window-manager.js';
 import { LifecycleManager } from './lifecycle.js';
 import { TrayManager } from './tray-manager.js';
@@ -16,6 +18,7 @@ import contextEngine from '../core/context/context-engine.js';
 import logger from '../shared/logger.js';
 
 logger.info('Initializing VeoFlow Main Process...');
+setElectronModule(electron);
 
 const windowManager = new WindowManager();
 const lifecycleManager = new LifecycleManager(windowManager);

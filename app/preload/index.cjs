@@ -35,6 +35,11 @@ contextBridge.exposeInMainWorld('veoflow', {
   getProviderConfigs: () => ipcRenderer.invoke('get-provider-configs'),
   setProviderConfig: (providerId, config) => ipcRenderer.invoke('set-provider-config', { providerId, config }),
 
+  // Secure Credential Management (Zero Secrets Exposed to Renderer)
+  getApiKeyStatus: () => ipcRenderer.invoke('get-api-key-status'),
+  saveApiKey: (provider, apiKey) => ipcRenderer.invoke('save-api-key', { provider, apiKey }),
+  clearApiKey: (provider) => ipcRenderer.invoke('clear-api-key', provider),
+
   // Custom Vocabulary & Snippets
   getDictionary: (onlyEnabled) => ipcRenderer.invoke('get-dictionary', onlyEnabled),
   addDictionaryWord: (trigger, rep, options) => ipcRenderer.invoke('add-dictionary-word', { trigger, rep, ...options }),

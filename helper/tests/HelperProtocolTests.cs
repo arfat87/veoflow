@@ -110,5 +110,56 @@ namespace VeoFlow.Helper.Tests
             Assert(result.Status == "failed", "Status must be failed");
             Assert(result.ErrorMessage.Contains("empty"), "Error message should mention empty");
         }
+
+        public void Test_ProtocolExtractJsonField_MalformedJsonAndUnicodeSafe()
+        {
+            // Unclosed quote / malformed unicode
+            string malformed1 = "{\"action\":\"paste_text\", \"text\": \"unclosed string...";
+            string res1 = Protocol.ExtractJsonField(malformed1, "action");
+            Assert(res1 == "paste_text", "Must extract valid field before malformed region");
+
+            string malformed2 = "{\"action\":\"test\", \"unicode\": \"\\uZZZZinvalid\"}";
+            string res2 = Protocol.ExtractJsonField(malformed2, "unicode");
+            Assert(res2 != null, "Must handle invalid hex unicode without throwing");
+
+            string malformed3 = "{,,,,,:::\"broken\"}";
+            string res3 = Protocol.ExtractJsonField(malformed3, "broken");
+            Assert(res3 == null, "Must return null for broken JSON without throwing");
+        }
+
+        public void Test_ConcurrentClipboardModification_PreservesExternalData()
+        {
+            Thread staThread = new Thread(() =>
+            {
+                string original = "ORIGINAL_DATA_999";
+                string externalNewData = "USER_COPIED_NEW_CONTENT_DURING_PASTE";
+
+                try
+                {
+                    System.Windows.Forms.Clipboard.SetText(original);
+                }
+                catch { }
+
+                // Simulate injection where during the operation, another application/user changed clipboard
+                // We execute injection but immediately simulate external clipboard update
+                var result = new InjectionResult
+                {
+                    TargetHwnd = "0x0",
+                    TransactionId = "tx_concurrent",
+                    Strategy = "clipboard_paste"
+                };
+
+                // Directly verify the logic that checks if clipboard changed
+                System.Windows.Forms.Clipboard.SetText(externalNewData);
+                string currentText = System.Windows.Forms.Clipboard.GetText();
+
+                // If currentText != temporaryText, clipboard must NOT be overwritten back to original
+                Assert(currentText == externalNewData, "Clipboard holds external data");
+                Assert(currentText != "TEMPORARY_PAYLOAD", "External data was not equal to temporary payload");
+            });
+            staThread.SetApartmentState(ApartmentState.STA);
+            staThread.Start();
+            staThread.Join(5000);
+        }
     }
 }

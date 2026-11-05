@@ -21,23 +21,40 @@ export class LifecycleManager {
   }
 
   configureSecurityPolicies() {
-    // Auto-approve only media permissions (microphone) for local origins
+    // 1. Strict Permission Handling: Approve only microphone media permissions for local file:// origins
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-      if (permission === 'media') {
+      const url = webContents?.getURL() || '';
+      if (permission === 'media' && url.startsWith('file://')) {
         return callback(true);
       }
+      logger.warn(`[Security] Denied permission request '${permission}' for origin: ${url}`);
       callback(false);
     });
 
-    // Content Security Policy (CSP) headers injection
+    session.defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
+      if (permission === 'media' && (requestingOrigin?.startsWith('file://') || webContents?.getURL()?.startsWith('file://'))) {
+        return true;
+      }
+      return false;
+    });
+
+    // 2. Strict Content Security Policy (CSP) headers injection: connect-src 'none' blocks unauthorized outbound network calls from renderer
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       callback({
         responseHeaders: {
           ...details.responseHeaders,
           'Content-Security-Policy': [
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https:;"
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none';"
           ]
         }
+      });
+    });
+
+    // 3. Prevent <webview> tag attachment across all WebContents
+    app.on('web-contents-created', (event, contents) => {
+      contents.on('will-attach-webview', (e) => {
+        logger.warn('[Security] Prevented webview attachment attempt');
+        e.preventDefault();
       });
     });
 

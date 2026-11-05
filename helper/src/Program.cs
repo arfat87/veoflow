@@ -11,6 +11,9 @@ namespace VeoFlow.Helper
     {
         private static readonly object _stdoutLock = new object();
         private static KeyboardHook _keyboardHook;
+        private const int MAX_LINE_LENGTH = 1048576; // 1 MB limit for IPC lines
+        private const int MAX_INJECTION_TEXT_LENGTH = 500000; // 500,000 chars max
+        private const int MAX_PARAM_LENGTH = 128;
 
         [STAThread]
         static void Main(string[] args)
@@ -92,13 +95,19 @@ namespace VeoFlow.Helper
                 line = line.Trim();
                 if (string.IsNullOrEmpty(line)) continue;
 
+                if (line.Length > MAX_LINE_LENGTH)
+                {
+                    SendJson(new { type = "error", code = -32600, message = "Payload exceeds maximum allowed size (1 MB)" });
+                    continue;
+                }
+
                 try
                 {
                     ProcessIpcCommand(line);
                 }
                 catch (Exception ex)
                 {
-                    SendJson(new { type = "error", message = ex.Message });
+                    SendJson(new { type = "error", code = -32603, message = ex.Message });
                 }
             }
 
@@ -159,9 +168,39 @@ namespace VeoFlow.Helper
                 case "inject_text":
                 case "paste_text":
                     string textToPaste = Protocol.ExtractJsonField(jsonLine, "text");
+                    if (textToPaste != null && textToPaste.Length > MAX_INJECTION_TEXT_LENGTH)
+                    {
+                        SendJson(new
+                        {
+                            type = "error",
+                            id = id,
+                            code = -32602,
+                            message = "Text parameter exceeds maximum allowed length (500,000 characters)"
+                        });
+                        return;
+                    }
+
                     string targetHwnd = Protocol.ExtractJsonField(jsonLine, "targetHwnd");
+                    if (targetHwnd != null && targetHwnd.Length > 32)
+                    {
+                        targetHwnd = targetHwnd.Substring(0, 32);
+                    }
+
                     string strategy = Protocol.ExtractJsonField(jsonLine, "strategy");
+                    if (!string.IsNullOrEmpty(strategy))
+                    {
+                        string sLower = strategy.ToLower();
+                        if (sLower != "auto" && sLower != "uia" && sLower != "clipboard_paste" && sLower != "send_input_unicode")
+                        {
+                            strategy = "auto";
+                        }
+                    }
+
                     string txId = Protocol.ExtractJsonField(jsonLine, "transactionId");
+                    if (txId != null && txId.Length > MAX_PARAM_LENGTH)
+                    {
+                        txId = txId.Substring(0, MAX_PARAM_LENGTH);
+                    }
 
                     var injectRes = TextInjector.ExecuteInjection(textToPaste, targetHwnd, strategy, txId);
                     SendJson(new
@@ -182,6 +221,9 @@ namespace VeoFlow.Helper
                 case "set_hotkey":
                     string key = Protocol.ExtractJsonField(jsonLine, "key");
                     string mods = Protocol.ExtractJsonField(jsonLine, "modifiers");
+                    if (key != null && key.Length > 32) key = key.Substring(0, 32);
+                    if (mods != null && mods.Length > 64) mods = mods.Substring(0, 64);
+
                     if (_keyboardHook != null)
                     {
                         _keyboardHook.ConfigureHotkey(mods, key);

@@ -1,6 +1,6 @@
 # VeoFlow: Complete File Inventory & Architecture Mapping
 
-**Document Version:** 1.9.0  
+**Document Version:** 2.0.0  
 **Inventory Date:** November 5, 2026  
 **Engineering Governance:** Adheres to Section 3 of `VEOFLOW_ARCHITECTURE.md`.
 
@@ -87,7 +87,8 @@ veoflow/
 │   │   ├── migrations.js             # Versioned SQLite migrations (001_initial, 002_user_features)
 │   │   └── sqlite-driver.js          # SQLite WebAssembly (sql.js) driver with atomic disk sync
 │   │
-│   ├── security/                     # Reserved for Phase 10 DPAPI credential protection
+│   ├── security/
+│   │   └── credential-manager.js     # Windows DPAPI safeStorage credential encryption & key masking
 │   │
 │   └── shared/
 │       ├── constants.js              # PIPELINE_STATES, HOTKEY_MODES, DEFAULT_CONFIG, PROVIDERS, MODELS
@@ -133,7 +134,8 @@ veoflow/
 │   │   ├── context_engine.test.js    # Vitest specs for app classification, sanitization, privacy & HWND tracking
 │   │   ├── formatting_engine.test.js # Vitest specs for LLM adapters, prompt rules, directives & validation
 │   │   ├── injection_manager.test.js # Vitest specs for target validation, UIA, clipboard restoration & auditing
-│   │   └── ui_desktop.test.js        # Vitest specs for HUD positioning, multi-monitor bounds, 7-screen settings & tray
+│   │   ├── ui_desktop.test.js        # Vitest specs for HUD positioning, multi-monitor bounds, 7-screen settings & tray
+│   │   └── security_hardening.test.js # Vitest specs for DPAPI encryption, logger redaction, IPC origin & privacy defaults
 │   ├── integration/
 │   │   ├── helper_ipc.test.js        # Vitest specs for native helper IPC & lifecycle
 │   │   └── notepad_live.test.js      # Vitest live integration with Notepad.exe
@@ -151,18 +153,21 @@ veoflow/
     ├── IMPLEMENTATION_STATUS.md      # Matrix of current vs target phase implementation
     ├── FILE_INVENTORY.md             # This document
     ├── TECHNICAL_RISKS.md            # Critical engineering risks & mitigations
-    └── PHASE_TRACKER.md              # 12-Phase roadmap completion tracker
+    ├── PHASE_TRACKER.md              # 12-Phase roadmap completion tracker
+    ├── SECURITY_AUDIT.md             # Complete security audit report with CVSS vulnerability matrix
+    ├── PRIVACY_DATA_FLOW.md          # Privacy data flow architecture & data minimization boundaries
+    └── THREAT_MODEL.md               # STRIDE threat model across all system trust boundaries
 ```
 
 ---
 
 ## 2. Dependencies & Build Tools Inventory
 
-| Package            |  Version  | Type | Function                                                        |
-| :----------------- | :-------: | :--: | :-------------------------------------------------------------- |
-| `electron`         | `^34.2.0` | Dev  | Cross-platform desktop application container                    |
-| `vite`             | `^8.3.6`  | Dev  | High-performance bundling and asset pipeline                    |
-| `vitest`           | `^5.1.0`  | Dev  | Fast unit and integration test runner                           |
-| `zod`              | `^4.6.7`  | Dev  | Strict runtime validation schemas for IPC & settings            |
-| `diff-match-patch` | `^1.0.5`  | Prod | High-efficiency diff calculation for incremental text injection |
+| Package            |  Version  | Type | Function                                                            |
+| :----------------- | :-------: | :--: | :------------------------------------------------------------------ |
+| `electron`         | `^34.2.0` | Dev  | Cross-platform desktop application container                        |
+| `vite`             | `^8.3.6`  | Dev  | High-performance bundling and asset pipeline                        |
+| `vitest`           | `^5.1.0`  | Dev  | Fast unit and integration test runner                               |
+| `zod`              | `^4.6.7`  | Dev  | Strict runtime validation schemas for IPC & settings                |
+| `diff-match-patch` | `^1.0.5`  | Prod | High-efficiency diff calculation for incremental text injection     |
 | `sql.js`           | `^1.15.2` | Prod | SQLite compiled to WebAssembly with zero native build prerequisites |

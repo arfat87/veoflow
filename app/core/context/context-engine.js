@@ -16,13 +16,19 @@ export class ContextEngine {
 
   /**
    * Evaluates privacy permissions from database configuration.
+   * Enforces privacy defaults: window title allowed, browser URL disabled, selected text disabled, textbox content disabled.
    */
   getPrivacyPolicy() {
+    const titleVal = this.db.getSetting('privacy_allow_window_title') ?? this.db.getSetting('context_window_title');
+    const selectedVal = this.db.getSetting('privacy_allow_selected_text') ?? this.db.getSetting('context_selected_text');
+    const textboxVal = this.db.getSetting('privacy_allow_surrounding_text') ?? this.db.getSetting('context_textbox_content');
+    const urlVal = this.db.getSetting('privacy_allow_browser_url') ?? this.db.getSetting('context_browser_url');
+
     return {
-      windowTitle: this.db.getSetting('context_window_title') !== 'false',
-      selectedText: this.db.getSetting('context_selected_text') === 'true', // Privacy default: disabled
-      textboxContent: this.db.getSetting('context_textbox_content') === 'true', // Privacy default: disabled
-      browserUrl: this.db.getSetting('context_browser_url') === 'true' // Privacy default: disabled
+      windowTitle: titleVal !== 'false', // Privacy default: allowed (configurable)
+      selectedText: selectedVal === 'true', // Privacy default: disabled
+      textboxContent: textboxVal === 'true', // Privacy default: disabled
+      browserUrl: urlVal === 'true' // Privacy default: disabled
     };
   }
 

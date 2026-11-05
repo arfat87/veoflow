@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import { SqliteDriver, getSqlJsEngine } from './sqlite-driver.js';
 import { runMigrations } from './migrations.js';
+import credentialManager from '../security/credential-manager.js';
 
 // Pre-load SQLite WebAssembly engine at module evaluation time
 const SQL = await getSqlJsEngine();
@@ -61,7 +62,7 @@ export class DatabaseManager {
       this.setDefaultSetting('history_retention_days', '30');
       this.setDefaultSetting('launch_at_startup', 'false');
       this.setDefaultSetting('privacy_allow_window_title', 'true');
-      this.setDefaultSetting('privacy_allow_browser_url', 'true');
+      this.setDefaultSetting('privacy_allow_browser_url', 'false');
       this.setDefaultSetting('privacy_allow_selected_text', 'false');
       this.setDefaultSetting('privacy_allow_surrounding_text', 'false');
 
@@ -103,25 +104,143 @@ export class DatabaseManager {
   // 1. SETTINGS OPERATIONS
   // ==========================================================================
 
+  // ==========================================================================
+  // 1. SETTINGS & CREDENTIAL OPERATIONS (DPAPI ENCRYPTED AT REST)
+  // ==========================================================================
+
   getSetting(key) {
     const row = this.driver.queryOne('SELECT value FROM settings WHERE key = ?;', [key]);
-    return row ? row.value : null;
+    if (!row || row.value === null) return null;
+    const val = row.value;
+
+    if (key.endsWith('_api_key') && val) {
+      if (val.startsWith('dpapi:') || val.startsWith('aes:')) {
+        try {
+          return credentialManager.decryptSync(val);
+        } catch {
+          return val;
+        }
+      } else {
+        // Plaintext key detected: auto-encrypt at rest with DPAPI
+        const encrypted = credentialManager.encryptSync(val);
+        this.driver.run('UPDATE settings SET value = ?, updated_at = ? WHERE key = ?;', [
+          encrypted,
+          new Date().toISOString(),
+          key
+        ]);
+        return val;
+      }
+    }
+
+    return val;
   }
 
-  getAllSettings() {
+  /**
+   * Returns all configuration settings.
+   * By default, strips sensitive API keys so secrets never reach the renderer process.
+   * @param {boolean} [includeSecrets=false]
+   * @returns {Object}
+   */
+  getAllSettings(includeSecrets = false) {
     const rows = this.driver.query('SELECT key, value FROM settings;');
     const result = {};
     for (const r of rows) {
+      if (!includeSecrets && r.key.endsWith('_api_key')) {
+        // Strict Security: Strip raw secrets from general settings export
+        continue;
+      }
       result[r.key] = r.value;
     }
     return result;
   }
 
   setSetting(key, value) {
+    let storedValue = String(value);
+    if (key.endsWith('_api_key') && storedValue) {
+      if (!storedValue.startsWith('dpapi:') && !storedValue.startsWith('aes:')) {
+        storedValue = credentialManager.encryptSync(storedValue);
+      }
+    }
     this.driver.run(
       'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?);',
-      [key, String(value), new Date().toISOString()]
+      [key, storedValue, new Date().toISOString()]
     );
+  }
+
+  saveApiKey(provider, apiKey) {
+    const prov = (provider || '').toLowerCase().trim();
+    const cleanKey = (apiKey || '').trim();
+    const encrypted = credentialManager.encryptSync(cleanKey);
+    const now = new Date().toISOString();
+
+    // 1. Update settings table
+    this.driver.run(
+      'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?);',
+      [`${prov}_api_key`, encrypted, now]
+    );
+
+    // 2. Update provider_configs table
+    const existing = this.driver.queryOne('SELECT provider_id FROM provider_configs WHERE provider_id = ?;', [prov]);
+    if (existing) {
+      this.driver.run(
+        'UPDATE provider_configs SET api_key_encrypted = ?, updated_at = ? WHERE provider_id = ?;',
+        [encrypted, now, prov]
+      );
+    } else {
+      this.driver.run(
+        'INSERT INTO provider_configs (provider_id, api_key_encrypted, is_enabled, updated_at) VALUES (?, ?, 1, ?);',
+        [prov, encrypted, now]
+      );
+    }
+    return true;
+  }
+
+  getApiKey(provider) {
+    const prov = (provider || '').toLowerCase().trim();
+    // 1. Try settings table
+    const keyFromSettings = this.getSetting(`${prov}_api_key`);
+    if (keyFromSettings && keyFromSettings.trim()) {
+      return keyFromSettings.trim();
+    }
+
+    // 2. Try provider_configs table
+    const row = this.driver.queryOne('SELECT api_key_encrypted FROM provider_configs WHERE provider_id = ?;', [prov]);
+    if (row && row.api_key_encrypted) {
+      try {
+        return credentialManager.decryptSync(row.api_key_encrypted);
+      } catch {}
+    }
+
+    // 3. Fallback to process.env
+    const envKey = process.env[`${prov.toUpperCase()}_API_KEY`];
+    return envKey ? envKey.trim() : '';
+  }
+
+  hasApiKey(provider) {
+    const key = this.getApiKey(provider);
+    return Boolean(key && key.trim().length > 0);
+  }
+
+  getApiKeyStatus() {
+    const providers = ['gemini', 'groq', 'openai'];
+    const status = {};
+    for (const p of providers) {
+      const key = this.getApiKey(p);
+      const configured = Boolean(key && key.trim().length > 0);
+      status[p] = {
+        configured,
+        masked: configured ? credentialManager.mask(key) : ''
+      };
+    }
+    return status;
+  }
+
+  clearApiKey(provider) {
+    const prov = (provider || '').toLowerCase().trim();
+    const now = new Date().toISOString();
+    this.driver.run('UPDATE settings SET value = "", updated_at = ? WHERE key = ?;', [now, `${prov}_api_key`]);
+    this.driver.run('UPDATE provider_configs SET api_key_encrypted = NULL, updated_at = ? WHERE provider_id = ?;', [now, prov]);
+    return true;
   }
 
   // ==========================================================================
@@ -227,6 +346,17 @@ export class DatabaseManager {
 
   clearHistory() {
     this.driver.run('DELETE FROM dictations;');
+    try {
+      const recDir = path.join(os.homedir(), '.veoflow', 'recordings');
+      if (fs.existsSync(recDir)) {
+        const files = fs.readdirSync(recDir).filter(f => f.startsWith('recording_'));
+        for (const file of files) {
+          try {
+            fs.unlinkSync(path.join(recDir, file));
+          } catch {}
+        }
+      }
+    } catch {}
     return true;
   }
 

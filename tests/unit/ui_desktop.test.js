@@ -171,7 +171,7 @@ describe('Phase 08: Desktop UI, Floating HUD & Settings Subsystems', () => {
       expect(settings.privacy_allow_window_title).toBe('true');
       expect(settings.privacy_allow_selected_text).toBe('false');
       expect(settings.privacy_allow_surrounding_text).toBe('false');
-      expect(settings.privacy_allow_browser_url).toBe('true');
+      expect(settings.privacy_allow_browser_url).toBe('false');
       expect(settings.allow_fallback).toBe('true');
     });
 

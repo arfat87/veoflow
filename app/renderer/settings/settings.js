@@ -170,16 +170,41 @@ const allowFallbackToggle = document.getElementById('allowFallbackToggle');
 
 async function loadAiSettings() {
   if (!window.veoflow) return;
-  const settings = await window.veoflow.getSettings();
+  const [settings, keyStatus] = await Promise.all([
+    window.veoflow.getSettings(),
+    window.veoflow.getApiKeyStatus ? window.veoflow.getApiKeyStatus() : Promise.resolve({})
+  ]);
 
   const activeProvider = settings.stt_provider || settings.ai_provider || 'gemini';
   providerRadios.forEach(r => {
     r.checked = (r.value === activeProvider);
   });
 
-  geminiKeyInput.value = settings.gemini_api_key || '';
-  groqKeyInput.value = settings.groq_api_key || '';
-  openaiKeyInput.value = settings.openai_api_key || '';
+  // Zero-secret display: show masked placeholder only if configured
+  if (keyStatus?.gemini?.configured) {
+    geminiKeyInput.value = '';
+    geminiKeyInput.placeholder = `Encrypted (${keyStatus.gemini.masked}) - enter new to change`;
+  } else {
+    geminiKeyInput.value = '';
+    geminiKeyInput.placeholder = 'AIzaSy...';
+  }
+
+  if (keyStatus?.groq?.configured) {
+    groqKeyInput.value = '';
+    groqKeyInput.placeholder = `Encrypted (${keyStatus.groq.masked}) - enter new to change`;
+  } else {
+    groqKeyInput.value = '';
+    groqKeyInput.placeholder = 'gsk_...';
+  }
+
+  if (keyStatus?.openai?.configured) {
+    openaiKeyInput.value = '';
+    openaiKeyInput.placeholder = `Encrypted (${keyStatus.openai.masked}) - enter new to change`;
+  } else {
+    openaiKeyInput.value = '';
+    openaiKeyInput.placeholder = 'sk-...';
+  }
+
   allowFallbackToggle.checked = (settings.allow_fallback !== 'false');
 }
 
@@ -193,18 +218,42 @@ providerRadios.forEach(radio => {
 });
 
 document.getElementById('saveGeminiKey')?.addEventListener('click', async () => {
-  await window.veoflow.saveSetting('gemini_api_key', geminiKeyInput.value.trim());
-  showNotice('Gemini API key saved');
+  const val = geminiKeyInput.value.trim();
+  if (val) {
+    if (window.veoflow.saveApiKey) {
+      await window.veoflow.saveApiKey('gemini', val);
+    } else {
+      await window.veoflow.saveSetting('gemini_api_key', val);
+    }
+    showNotice('Gemini API key encrypted and securely stored');
+    await loadAiSettings();
+  }
 });
 
 document.getElementById('saveGroqKey')?.addEventListener('click', async () => {
-  await window.veoflow.saveSetting('groq_api_key', groqKeyInput.value.trim());
-  showNotice('Groq API key saved');
+  const val = groqKeyInput.value.trim();
+  if (val) {
+    if (window.veoflow.saveApiKey) {
+      await window.veoflow.saveApiKey('groq', val);
+    } else {
+      await window.veoflow.saveSetting('groq_api_key', val);
+    }
+    showNotice('Groq API key encrypted and securely stored');
+    await loadAiSettings();
+  }
 });
 
 document.getElementById('saveOpenaiKey')?.addEventListener('click', async () => {
-  await window.veoflow.saveSetting('openai_api_key', openaiKeyInput.value.trim());
-  showNotice('OpenAI API key saved');
+  const val = openaiKeyInput.value.trim();
+  if (val) {
+    if (window.veoflow.saveApiKey) {
+      await window.veoflow.saveApiKey('openai', val);
+    } else {
+      await window.veoflow.saveSetting('openai_api_key', val);
+    }
+    showNotice('OpenAI API key encrypted and securely stored');
+    await loadAiSettings();
+  }
 });
 
 allowFallbackToggle?.addEventListener('change', async () => {
@@ -719,7 +768,7 @@ async function loadPrivacy() {
   ]);
 
   privacyAllowWindowTitle.checked = (settings.privacy_allow_window_title !== 'false');
-  privacyAllowBrowserUrl.checked = (settings.privacy_allow_browser_url !== 'false');
+  privacyAllowBrowserUrl.checked = (settings.privacy_allow_browser_url === 'true');
   privacyAllowSelectedText.checked = (settings.privacy_allow_selected_text === 'true');
   privacyAllowSurroundingText.checked = (settings.privacy_allow_surrounding_text === 'true');
 
