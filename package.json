@@ -1,0 +1,35 @@
+{
+  "name": "veoflow",
+  "version": "1.0.0",
+  "description": "Intelligent context-aware voice dictation desktop assistant",
+  "type": "module",
+  "main": "app/main/index.js",
+  "scripts": {
+    "start": "node -e \"delete process.env.ELECTRON_RUN_AS_NODE; const cp = require('child_process').spawn(require('electron'), ['.'], { stdio: 'inherit' }); cp.on('exit', code => process.exit(code || 0));\"",
+    "dev": "node -e \"delete process.env.ELECTRON_RUN_AS_NODE; const cp = require('child_process').spawn(require('electron'), ['.'], { stdio: 'inherit' }); cp.on('exit', code => process.exit(code || 0));\"",
+    "build:renderer": "vite build",
+    "build:helper": "cd helper && build.bat",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:legacy": "node test_all.js"
+  },
+  "keywords": [
+    "dictation",
+    "voice-typing",
+    "whisper",
+    "gemini",
+    "accessibility",
+    "ai"
+  ],
+  "author": "VeoFlow",
+  "license": "MIT",
+  "dependencies": {
+    "diff-match-patch": "^1.0.5"
+  },
+  "devDependencies": {
+    "electron": "^34.2.0",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0",
+    "zod": "^4.6.7"
+  }
+}

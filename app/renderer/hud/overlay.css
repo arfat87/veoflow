@@ -1,0 +1,257 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+}
+
+body {
+  background: transparent;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Glassmorphism Floating Pill */
+.widget {
+  width: 340px;
+  height: 56px;
+  background: #0f172a;
+  border: 2px solid #38bdf8;
+  border-radius: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #f8fafc;
+}
+
+/* Draggable Region */
+.drag-handle {
+  width: 14px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: drag;
+  cursor: grab;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.drag-handle:hover {
+  opacity: 0.8;
+}
+
+.drag-dots {
+  width: 4px;
+  height: 14px;
+  border-left: 2px dotted #94a3b8;
+}
+
+/* Mic Container */
+.mic-container {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  position: relative;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: all 0.2s;
+}
+
+.mic-container:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: scale(1.05);
+}
+
+.icon-mic {
+  width: 18px;
+  height: 18px;
+  color: #94a3b8;
+  transition: color 0.2s;
+}
+
+.mic-glow {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.6) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* Spinner for Processing */
+.spinner {
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  opacity: 0;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Center Content */
+.center-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+#visualizer {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.text-display {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  margin-bottom: 1px;
+}
+
+.status-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+.btn-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* STATES */
+
+/* 1. Recording */
+.state-recording {
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.25);
+}
+
+.state-recording .mic-glow {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.8) 0%, transparent 70%);
+  animation: pulse 1.2s infinite alternate ease-in-out;
+}
+
+.state-recording .icon-mic {
+  color: #ef4444;
+}
+
+.state-recording #visualizer {
+  opacity: 1;
+}
+
+.state-recording .text-display {
+  opacity: 0.15;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 0.5; }
+  100% { transform: scale(1.25); opacity: 0.9; }
+}
+
+/* 2. Processing / Transcribing */
+.state-processing .spinner,
+.state-transcribing .spinner,
+.state-formatting .spinner {
+  opacity: 1;
+}
+
+.state-processing .icon-mic,
+.state-transcribing .icon-mic,
+.state-formatting .icon-mic {
+  opacity: 0.3;
+}
+
+.state-transcribing .status-badge { color: #38bdf8; }
+.state-formatting .status-badge { color: #a855f7; }
+
+/* 3. Pasting */
+.state-pasting {
+  border-color: rgba(168, 85, 247, 0.4);
+}
+.state-pasting .status-badge { color: #c084fc; }
+
+/* 4. Success */
+.state-success {
+  border-color: rgba(34, 197, 94, 0.4);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(34, 197, 94, 0.3);
+}
+
+.state-success .icon-mic {
+  color: #22c55e;
+}
+.state-success .status-badge { color: #4ade80; }
+
+/* 5. Error */
+.state-error {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+.state-error .icon-mic {
+  color: #f59e0b;
+}
+.state-error .status-badge { color: #fbbf24; }

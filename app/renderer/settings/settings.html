@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VeoFlow Settings & History</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="22"/>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <h2>VeoFlow</h2>
+          <span class="version">v1.0.0</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="ai-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          AI Providers
+        </button>
+
+        <button class="nav-item" data-tab="history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          History
+        </button>
+
+        <button class="nav-item" data-tab="dictionary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+            <path d="M6 6h10M6 10h10"/>
+          </svg>
+          Dictionary
+        </button>
+
+        <button class="nav-item" data-tab="snippets">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+          </svg>
+          Snippets
+        </button>
+
+        <button class="nav-item" data-tab="shortcuts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h8M6 16h.01M10 16h.01M14 16h.01M18 16h.01"/>
+          </svg>
+          Hotkeys & Preferences
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main Tab Content Area -->
+    <main class="content-area">
+
+      <!-- 1. AI Settings Tab -->
+      <section id="ai-settings" class="tab-pane active">
+        <div class="pane-header flex-between">
+          <div>
+            <h1>AI Inference & Models</h1>
+            <p>Configure speech recognition and context-aware LLM formatting models.</p>
+          </div>
+          <button class="btn-primary" id="testDictationBtn" style="padding: 10px 18px; font-size: 13px; font-weight: 600;">
+            🎙️ Start Voice Test
+          </button>
+        </div>
+
+        <div class="card">
+          <h3>Active Provider</h3>
+          <p class="card-desc">Choose which speech recognition and formatting service powers VeoFlow.</p>
+          <div class="radio-group" id="providerSelect">
+            <label class="radio-option">
+              <input type="radio" name="ai_provider" value="gemini" checked>
+              <div class="radio-box">
+                <span class="provider-title">Google Gemini (Recommended)</span>
+                <span class="provider-sub">Gemini 2.0 Flash Audio + Context Formatter</span>
+              </div>
+            </label>
+
+            <label class="radio-option">
+              <input type="radio" name="ai_provider" value="groq">
+              <div class="radio-box">
+                <span class="provider-title">Groq (Ultra-Fast)</span>
+                <span class="provider-sub">Whisper Large v3 Turbo (&lt;250ms ASR) + Llama 3.3</span>
+              </div>
+            </label>
+
+            <label class="radio-option">
+              <input type="radio" name="ai_provider" value="openai">
+              <div class="radio-box">
+                <span class="provider-title">OpenAI</span>
+                <span class="provider-sub">Whisper-1 + GPT-4o Mini Formatter</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>API Credentials</h3>
+          <div class="form-group">
+            <label>Gemini API Key</label>
+            <div class="input-with-action">
+              <input type="password" id="geminiKeyInput" placeholder="AIzaSy...">
+              <button class="btn-secondary" id="saveGeminiKey">Save</button>
+            </div>
+            <span class="input-help">Get a free key from Google AI Studio (aistudio.google.com).</span>
+          </div>
+
+          <div class="form-group">
+            <label>Groq API Key (Optional)</label>
+            <div class="input-with-action">
+              <input type="password" id="groqKeyInput" placeholder="gsk_...">
+              <button class="btn-secondary" id="saveGroqKey">Save</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>OpenAI API Key (Optional)</label>
+            <div class="input-with-action">
+              <input type="password" id="openaiKeyInput" placeholder="sk-...">
+              <button class="btn-secondary" id="saveOpenaiKey">Save</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. History Tab -->
+      <section id="history" class="tab-pane">
+        <div class="pane-header flex-between">
+          <div>
+            <h1>Transcription History</h1>
+            <p>Review and search past dictations recorded by VeoFlow.</p>
+          </div>
+          <button class="btn-danger" id="clearHistoryBtn">Clear History</button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Application</th>
+                <th>Formatted Text</th>
+                <th>Raw Speech</th>
+                <th>Latency</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr>
+                <td colspan="6" class="empty-state">No dictations recorded yet. Press Ctrl+Alt+Space to dictate!</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3. Dictionary Tab -->
+      <section id="dictionary" class="tab-pane">
+        <div class="pane-header">
+          <h1>Custom Dictionary</h1>
+          <p>Add technical terms, jargon, or company acronyms that should be automatically replaced or formatted.</p>
+        </div>
+
+        <div class="card add-form">
+          <div class="form-row">
+            <input type="text" id="dictWordInput" placeholder="When I say (e.g. kubernetes)">
+            <input type="text" id="dictRepInput" placeholder="Replace with (e.g. K8s)">
+            <button class="btn-primary" id="addDictBtn">Add Entry</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Spoken Word</th>
+                <th>Replacement</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="dictionaryBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. Snippets Tab -->
+      <section id="snippets" class="tab-pane">
+        <div class="pane-header">
+          <h1>Voice Snippets</h1>
+          <p>Speak a quick trigger phrase to immediately expand into large text templates.</p>
+        </div>
+
+        <div class="card add-form">
+          <div class="form-row">
+            <input type="text" id="snippetTriggerInput" placeholder="Trigger (e.g. 'insert zoom link')">
+            <input type="text" id="snippetTextInput" placeholder="Expanded text (e.g. https://zoom.us/j/...)">
+            <button class="btn-primary" id="addSnippetBtn">Add Snippet</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Trigger Phrase</th>
+                <th>Expanded Text</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="snippetsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 5. Hotkeys & Preferences Tab -->
+      <section id="shortcuts" class="tab-pane">
+        <div class="pane-header">
+          <h1>Hotkeys & Preferences</h1>
+          <p>Customize global shortcuts and insertion behavior.</p>
+        </div>
+
+        <div class="card">
+          <div class="form-group">
+            <label>Global Activation Hotkey</label>
+            <div class="input-with-action">
+              <input type="text" id="hotkeyInput" value="Ctrl+Alt+Space" placeholder="e.g. Ctrl+Alt+Space or Win+Shift+V">
+              <button class="btn-primary" id="saveHotkeyBtn">Update Hotkey</button>
+            </div>
+            <span class="input-help">Hold the hotkey down while speaking (Push-to-Talk) or tap to start/stop.</span>
+          </div>
+
+          <div class="form-group">
+            <label>Tone Adaptation Preference</label>
+            <select id="toneSelect" class="select-input">
+              <option value="contextual">Contextual (Adaptive based on active application)</option>
+              <option value="formal">Formal & Professional</option>
+              <option value="casual">Casual & Conversational</option>
+              <option value="verbatim">Verbatim (Exact words only, no LLM tone polish)</option>
+            </select>
+          </div>
+
+          <div class="form-group toggle-group">
+            <div>
+              <label class="toggle-label">Automatic Direct Paste</label>
+              <p class="toggle-desc">Automatically pastes formatted text directly into the focused application upon speech completion.</p>
+            </div>
+            <input type="checkbox" id="autoPasteToggle" checked>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script type="module" src="settings.js"></script>
+</body>
+</html>
