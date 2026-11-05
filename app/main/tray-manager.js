@@ -7,10 +7,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export class TrayManager {
-  constructor(onToggleDictation, onOpenSettings) {
+  constructor(handlers = {}) {
     this.tray = null;
-    this.onToggleDictation = onToggleDictation;
-    this.onOpenSettings = onOpenSettings;
+    this.handlers = typeof handlers === 'function'
+      ? { onToggleDictation: handlers }
+      : (handlers || {});
   }
 
   createTray() {
@@ -18,26 +19,35 @@ export class TrayManager {
     this.tray = new Tray(iconPath);
 
     const contextMenu = Menu.buildFromTemplate([
-      { label: 'VeoFlow Active', enabled: false },
-      { type: 'separator' },
       {
-        label: 'Start / Stop Dictation',
-        click: () => this.onToggleDictation && this.onToggleDictation()
-      },
-      {
-        label: 'Settings & History',
-        click: () => this.onOpenSettings && this.onOpenSettings()
+        label: 'Open VeoFlow',
+        click: () => this.handlers.onOpenVeoFlow && this.handlers.onOpenVeoFlow()
       },
       { type: 'separator' },
       {
-        label: 'Quit VeoFlow',
-        click: () => app.quit()
+        label: 'Start Dictation',
+        click: () => this.handlers.onStartDictation && this.handlers.onStartDictation()
+      },
+      {
+        label: 'Stop Dictation',
+        click: () => this.handlers.onStopDictation && this.handlers.onStopDictation()
+      },
+      { type: 'separator' },
+      {
+        label: 'Settings & Dashboard',
+        click: () => this.handlers.onOpenSettings && this.handlers.onOpenSettings()
+      },
+      { type: 'separator' },
+      {
+        label: 'Exit VeoFlow',
+        click: () => (this.handlers.onExit ? this.handlers.onExit() : app.quit())
       }
     ]);
 
     this.tray.setToolTip('VeoFlow - Intelligent Voice Typing');
     this.tray.setContextMenu(contextMenu);
-    this.tray.on('double-click', () => this.onOpenSettings && this.onOpenSettings());
+    this.tray.on('click', () => this.handlers.onOpenVeoFlow && this.handlers.onOpenVeoFlow());
+    this.tray.on('double-click', () => this.handlers.onOpenSettings && this.handlers.onOpenSettings());
 
     logger.info('System tray initialized');
     return this.tray;
@@ -51,3 +61,4 @@ export class TrayManager {
   }
 }
 
+export default TrayManager;

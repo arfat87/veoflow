@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VeoFlow Settings & History</title>
+  <title>VeoFlow Settings & Dashboard</title>
   <link rel="stylesheet" href="settings.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-logo">
+        <div class="brand-logo" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -20,48 +20,72 @@
         </div>
         <div class="brand-info">
           <h2>VeoFlow</h2>
-          <span class="version">v1.0.0</span>
+          <span class="version">v1.0.0 • Desktop</span>
         </div>
       </div>
 
-      <nav class="nav-menu">
-        <button class="nav-item active" data-tab="ai-settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <nav class="nav-menu" role="tablist" aria-label="Settings Navigation">
+        <!-- 1. Dashboard -->
+        <button class="nav-item active" data-tab="dashboard" role="tab" aria-selected="true" aria-controls="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="9" rx="1"/>
+            <rect x="14" y="3" width="7" height="5" rx="1"/>
+            <rect x="14" y="12" width="7" height="9" rx="1"/>
+            <rect x="3" y="16" width="7" height="5" rx="1"/>
+          </svg>
+          Dashboard
+        </button>
+
+        <!-- 2. AI Providers -->
+        <button class="nav-item" data-tab="ai-settings" role="tab" aria-selected="false" aria-controls="ai-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
           </svg>
           AI Providers
         </button>
 
-        <button class="nav-item" data-tab="history">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- 3. Dictation History -->
+        <button class="nav-item" data-tab="history" role="tab" aria-selected="false" aria-controls="history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="10"/>
             <polyline points="12 6 12 12 16 14"/>
           </svg>
           History
         </button>
 
-        <button class="nav-item" data-tab="dictionary">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- 4. General Settings -->
+        <button class="nav-item" data-tab="general" role="tab" aria-selected="false" aria-controls="general">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h8M6 16h.01M10 16h.01M14 16h.01M18 16h.01"/>
+          </svg>
+          General & Audio
+        </button>
+
+        <!-- 5. Custom Dictionary -->
+        <button class="nav-item" data-tab="dictionary" role="tab" aria-selected="false" aria-controls="dictionary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
             <path d="M6 6h10M6 10h10"/>
           </svg>
           Dictionary
         </button>
 
-        <button class="nav-item" data-tab="snippets">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- 6. Voice Snippets -->
+        <button class="nav-item" data-tab="snippets" role="tab" aria-selected="false" aria-controls="snippets">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <polyline points="16 18 22 12 16 6"/>
             <polyline points="8 6 2 12 8 18"/>
           </svg>
-          Snippets
+          Voice Snippets
         </button>
 
-        <button class="nav-item" data-tab="shortcuts">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="4" width="20" height="16" rx="2"/>
-            <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h8M6 16h.01M10 16h.01M14 16h.01M18 16h.01"/>
+        <!-- 7. Privacy & Permissions -->
+        <button class="nav-item" data-tab="privacy" role="tab" aria-selected="false" aria-controls="privacy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
-          Hotkeys & Preferences
+          Privacy & Rules
         </button>
       </nav>
     </aside>
@@ -69,120 +93,317 @@
     <!-- Main Tab Content Area -->
     <main class="content-area">
 
-      <!-- 1. AI Settings Tab -->
-      <section id="ai-settings" class="tab-pane active">
+      <!-- ==================================================================
+           SECTION 1: DASHBOARD
+           ================================================================== -->
+      <section id="dashboard" class="tab-pane active" role="tabpanel" aria-labelledby="tab-dashboard">
+        <div class="pane-header flex-between">
+          <div>
+            <h1>Dashboard</h1>
+            <p>System overview, dictation statistics, and quick control actions.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-primary" id="dashStartDictBtn">🎙️ Start Voice Dictation</button>
+            <button class="btn-secondary" id="dashOpenHudBtn">Show Floating HUD</button>
+          </div>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">Total Dictations</span>
+            <span class="stat-value" id="statTotalDictations">0</span>
+            <span class="stat-sub">Lifetime sessions</span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-label">Average Latency</span>
+            <span class="stat-value" id="statAvgLatency">0 ms</span>
+            <span class="stat-sub">End-to-end processing</span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-label">Success Rate</span>
+            <span class="stat-value text-green" id="statSuccessRate">100%</span>
+            <span class="stat-sub">Completed insertions</span>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-label">Active Provider</span>
+            <span class="stat-value text-cyan" id="statActiveProvider">Gemini</span>
+            <span class="stat-sub">Primary AI engine</span>
+          </div>
+        </div>
+
+        <!-- System Status & Quick Actions -->
+        <div class="grid-2col">
+          <div class="card">
+            <h3>System Status</h3>
+            <div class="status-row">
+              <span class="status-indicator active"></span>
+              <span class="status-name">Windows Native Helper:</span>
+              <span class="status-detail" id="helperStatusDetail">Active (PID: 64-bit)</span>
+            </div>
+            <div class="status-row">
+              <span class="status-indicator active"></span>
+              <span class="status-name">Microphone Capture:</span>
+              <span class="status-detail" id="audioStatusDetail">Ready (Web Audio 16kHz)</span>
+            </div>
+            <div class="status-row">
+              <span class="status-indicator active"></span>
+              <span class="status-name">Global Hotkey:</span>
+              <span class="status-detail" id="hotkeyStatusDetail">Ctrl+Alt+Space</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Quick Actions</h3>
+            <div class="quick-btn-group">
+              <button class="btn-secondary" id="dashQuickTestAi">⚡ Test Active AI Connection</button>
+              <button class="btn-secondary" id="dashQuickViewHistory">📋 View Full History</button>
+              <button class="btn-secondary" id="dashQuickClearHistory">🗑️ Clear History Cache</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity Table -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="flex-between" style="margin-bottom: 12px;">
+            <h3>Recent Dictation Activity</h3>
+            <span class="card-desc">Showing latest 5 entries</span>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>App</th>
+                  <th>Result</th>
+                  <th>Latency</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="dashRecentHistoryBody">
+                <tr>
+                  <td colspan="5" class="empty-state">No dictation sessions recorded yet. Press Ctrl+Alt+Space to dictate!</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           SECTION 2: AI PROVIDER SETTINGS
+           ================================================================== -->
+      <section id="ai-settings" class="tab-pane" role="tabpanel" aria-labelledby="tab-ai-settings">
         <div class="pane-header flex-between">
           <div>
             <h1>AI Inference & Models</h1>
-            <p>Configure speech recognition and context-aware LLM formatting models.</p>
+            <p>Configure speech recognition providers, models, API keys, and fallback policies.</p>
           </div>
-          <button class="btn-primary" id="testDictationBtn" style="padding: 10px 18px; font-size: 13px; font-weight: 600;">
-            🎙️ Start Voice Test
-          </button>
         </div>
 
         <div class="card">
-          <h3>Active Provider</h3>
-          <p class="card-desc">Choose which speech recognition and formatting service powers VeoFlow.</p>
+          <h3>Primary Speech Recognition Provider</h3>
+          <p class="card-desc">Select which speech-to-text service powers live audio transcription.</p>
           <div class="radio-group" id="providerSelect">
             <label class="radio-option">
               <input type="radio" name="ai_provider" value="gemini" checked>
               <div class="radio-box">
-                <span class="provider-title">Google Gemini (Recommended)</span>
-                <span class="provider-sub">Gemini 2.0 Flash Audio + Context Formatter</span>
+                <span class="provider-title">Google Gemini (Multimodal Audio)</span>
+                <span class="provider-sub">Direct native audio inference with low latency &amp; deep context</span>
               </div>
             </label>
 
             <label class="radio-option">
               <input type="radio" name="ai_provider" value="groq">
               <div class="radio-box">
-                <span class="provider-title">Groq (Ultra-Fast)</span>
-                <span class="provider-sub">Whisper Large v3 Turbo (&lt;250ms ASR) + Llama 3.3</span>
+                <span class="provider-title">Groq Cloud (Whisper Turbo)</span>
+                <span class="provider-sub">Whisper Large v3 Turbo (&lt;250ms ASR) + LPU inference speed</span>
               </div>
             </label>
 
             <label class="radio-option">
               <input type="radio" name="ai_provider" value="openai">
               <div class="radio-box">
-                <span class="provider-title">OpenAI</span>
-                <span class="provider-sub">Whisper-1 + GPT-4o Mini Formatter</span>
+                <span class="provider-title">OpenAI (Whisper-1)</span>
+                <span class="provider-sub">Official Whisper audio model + GPT-4o Mini contextual formatter</span>
               </div>
             </label>
+          </div>
+
+          <div class="form-group toggle-group" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px;">
+            <div>
+              <label class="toggle-label">Automatic Provider Fallback</label>
+              <p class="toggle-desc">Automatically switch to secondary configured providers if primary encounters rate limits or network issues.</p>
+            </div>
+            <input type="checkbox" id="allowFallbackToggle" checked>
           </div>
         </div>
 
         <div class="card">
-          <h3>API Credentials</h3>
+          <h3>API Credentials &amp; Connectivity Tests</h3>
+          
+          <!-- Gemini -->
           <div class="form-group">
-            <label>Gemini API Key</label>
+            <label>Google Gemini API Key</label>
             <div class="input-with-action">
               <input type="password" id="geminiKeyInput" placeholder="AIzaSy...">
               <button class="btn-secondary" id="saveGeminiKey">Save</button>
+              <button class="btn-secondary btn-test-conn" id="testGeminiBtn" data-provider="gemini">Test Connection</button>
             </div>
-            <span class="input-help">Get a free key from Google AI Studio (aistudio.google.com).</span>
+            <div class="test-feedback" id="geminiTestFeedback"></div>
+            <span class="input-help">Free tier available from Google AI Studio (aistudio.google.com).</span>
           </div>
 
+          <!-- Groq -->
           <div class="form-group">
-            <label>Groq API Key (Optional)</label>
+            <label>Groq API Key</label>
             <div class="input-with-action">
               <input type="password" id="groqKeyInput" placeholder="gsk_...">
               <button class="btn-secondary" id="saveGroqKey">Save</button>
+              <button class="btn-secondary btn-test-conn" id="testGroqBtn" data-provider="groq">Test Connection</button>
             </div>
+            <div class="test-feedback" id="groqTestFeedback"></div>
+            <span class="input-help">Fast inference via console.groq.com.</span>
           </div>
 
+          <!-- OpenAI -->
           <div class="form-group">
-            <label>OpenAI API Key (Optional)</label>
+            <label>OpenAI API Key</label>
             <div class="input-with-action">
               <input type="password" id="openaiKeyInput" placeholder="sk-...">
               <button class="btn-secondary" id="saveOpenaiKey">Save</button>
+              <button class="btn-secondary btn-test-conn" id="testOpenaiBtn" data-provider="openai">Test Connection</button>
             </div>
+            <div class="test-feedback" id="openaiTestFeedback"></div>
+            <span class="input-help">Standard OpenAI API key from platform.openai.com.</span>
           </div>
         </div>
       </section>
 
-      <!-- 2. History Tab -->
-      <section id="history" class="tab-pane">
+      <!-- ==================================================================
+           SECTION 3: DICTATION HISTORY
+           ================================================================== -->
+      <section id="history" class="tab-pane" role="tabpanel" aria-labelledby="tab-history">
         <div class="pane-header flex-between">
           <div>
-            <h1>Transcription History</h1>
-            <p>Review and search past dictations recorded by VeoFlow.</p>
+            <h1>Dictation History</h1>
+            <p>Inspect, filter, re-copy, or delete past transcriptions and injection transactions.</p>
           </div>
-          <button class="btn-danger" id="clearHistoryBtn">Clear History</button>
+          <button class="btn-danger" id="clearHistoryBtn">Clear All History</button>
+        </div>
+
+        <div class="card" style="padding: 12px 16px; margin-bottom: 16px;">
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="historySearchInput" placeholder="Search history by text, application name, or date..." class="search-input">
+          </div>
         </div>
 
         <div class="table-container">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Time</th>
-                <th>Application</th>
+                <th style="width: 120px;">Time</th>
+                <th style="width: 130px;">Application</th>
                 <th>Formatted Text</th>
-                <th>Raw Speech</th>
-                <th>Latency</th>
-                <th>Action</th>
+                <th style="width: 180px;">Raw Speech</th>
+                <th style="width: 80px;">Latency</th>
+                <th style="width: 80px;">Status</th>
+                <th style="width: 130px;">Actions</th>
               </tr>
             </thead>
             <tbody id="historyBody">
               <tr>
-                <td colspan="6" class="empty-state">No dictations recorded yet. Press Ctrl+Alt+Space to dictate!</td>
+                <td colspan="7" class="empty-state">No dictations recorded yet. Press Ctrl+Alt+Space to dictate!</td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- 3. Dictionary Tab -->
-      <section id="dictionary" class="tab-pane">
+      <!-- ==================================================================
+           SECTION 4: GENERAL SETTINGS & AUDIO
+           ================================================================== -->
+      <section id="general" class="tab-pane" role="tabpanel" aria-labelledby="tab-general">
         <div class="pane-header">
-          <h1>Custom Dictionary</h1>
-          <p>Add technical terms, jargon, or company acronyms that should be automatically replaced or formatted.</p>
+          <h1>General Preferences &amp; Audio Input</h1>
+          <p>Configure hardware audio devices, startup behavior, insertion, and global hotkeys.</p>
+        </div>
+
+        <div class="card">
+          <h3>Audio Input Hardware</h3>
+          <div class="form-group">
+            <label>Microphone Device</label>
+            <div class="input-with-action">
+              <select id="audioDeviceSelect" class="select-input">
+                <option value="default">Default System Microphone</option>
+              </select>
+              <button class="btn-secondary" id="refreshAudioDevicesBtn">Refresh Devices</button>
+            </div>
+            <span class="input-help">Select the dedicated microphone for voice recognition.</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Workflow &amp; Hotkeys</h3>
+          
+          <div class="form-group">
+            <label>Global Activation Shortcut</label>
+            <div class="input-with-action">
+              <input type="text" id="hotkeyInput" value="Ctrl+Alt+Space" placeholder="e.g. Ctrl+Alt+Space">
+              <button class="btn-primary" id="saveHotkeyBtn">Update Shortcut</button>
+            </div>
+            <span class="input-help">Hold down for Push-to-Talk or tap once to toggle recording.</span>
+          </div>
+
+          <div class="form-group">
+            <label>Default Tone Adaptation</label>
+            <select id="toneSelect" class="select-input">
+              <option value="contextual">Contextual (Adaptive to target window category)</option>
+              <option value="formal">Formal &amp; Professional</option>
+              <option value="casual">Casual &amp; Conversational</option>
+              <option value="verbatim">Verbatim (Exact words only, skip tone rewriting)</option>
+            </select>
+          </div>
+
+          <div class="form-group toggle-group">
+            <div>
+              <label class="toggle-label">Automatic Direct Paste</label>
+              <p class="toggle-desc">Automatically insert formatted text into the active field upon speech completion.</p>
+            </div>
+            <input type="checkbox" id="autoPasteToggle" checked>
+          </div>
+
+          <div class="form-group toggle-group">
+            <div>
+              <label class="toggle-label">Launch at Windows Startup</label>
+              <p class="toggle-desc">Automatically launch VeoFlow in background tray when Windows logs in.</p>
+            </div>
+            <input type="checkbox" id="startupToggle">
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           SECTION 5: CUSTOM DICTIONARY
+           ================================================================== -->
+      <section id="dictionary" class="tab-pane" role="tabpanel" aria-labelledby="tab-dictionary">
+        <div class="pane-header">
+          <h1>Custom Vocabulary Dictionary</h1>
+          <p>Add technical terms, code identifiers, jargon, or acronyms for automatic whole-word replacement.</p>
         </div>
 
         <div class="card add-form">
           <div class="form-row">
             <input type="text" id="dictWordInput" placeholder="When I say (e.g. kubernetes)">
             <input type="text" id="dictRepInput" placeholder="Replace with (e.g. K8s)">
-            <button class="btn-primary" id="addDictBtn">Add Entry</button>
+            <button class="btn-primary" id="addDictBtn">Add Substitution</button>
           </div>
         </div>
 
@@ -190,9 +411,9 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Spoken Word</th>
-                <th>Replacement</th>
-                <th>Action</th>
+                <th>Spoken Trigger Word</th>
+                <th>Target Replacement</th>
+                <th style="width: 100px;">Action</th>
               </tr>
             </thead>
             <tbody id="dictionaryBody"></tbody>
@@ -200,17 +421,19 @@
         </div>
       </section>
 
-      <!-- 4. Snippets Tab -->
-      <section id="snippets" class="tab-pane">
+      <!-- ==================================================================
+           SECTION 6: VOICE SNIPPETS
+           ================================================================== -->
+      <section id="snippets" class="tab-pane" role="tabpanel" aria-labelledby="tab-snippets">
         <div class="pane-header">
-          <h1>Voice Snippets</h1>
-          <p>Speak a quick trigger phrase to immediately expand into large text templates.</p>
+          <h1>Voice Snippets &amp; Templates</h1>
+          <p>Speak a short trigger phrase to immediately insert pre-written boilerplates, URLs, or signatures.</p>
         </div>
 
         <div class="card add-form">
           <div class="form-row">
-            <input type="text" id="snippetTriggerInput" placeholder="Trigger (e.g. 'insert zoom link')">
-            <input type="text" id="snippetTextInput" placeholder="Expanded text (e.g. https://zoom.us/j/...)">
+            <input type="text" id="snippetTriggerInput" placeholder="Trigger phrase (e.g. 'my zoom link')">
+            <input type="text" id="snippetTextInput" placeholder="Expanded template text (e.g. https://zoom.us/j/...)">
             <button class="btn-primary" id="addSnippetBtn">Add Snippet</button>
           </div>
         </div>
@@ -221,7 +444,7 @@
               <tr>
                 <th>Trigger Phrase</th>
                 <th>Expanded Text</th>
-                <th>Action</th>
+                <th style="width: 100px;">Action</th>
               </tr>
             </thead>
             <tbody id="snippetsBody"></tbody>
@@ -229,39 +452,88 @@
         </div>
       </section>
 
-      <!-- 5. Hotkeys & Preferences Tab -->
-      <section id="shortcuts" class="tab-pane">
+      <!-- ==================================================================
+           SECTION 7: PRIVACY & PERMISSIONS
+           ================================================================== -->
+      <section id="privacy" class="tab-pane" role="tabpanel" aria-labelledby="tab-privacy">
         <div class="pane-header">
-          <h1>Hotkeys & Preferences</h1>
-          <p>Customize global shortcuts and insertion behavior.</p>
+          <h1>Privacy Controls &amp; Application Rules</h1>
+          <p>Manage data capture permissions and configure application-specific tone and formatting rules.</p>
         </div>
 
         <div class="card">
-          <div class="form-group">
-            <label>Global Activation Hotkey</label>
-            <div class="input-with-action">
-              <input type="text" id="hotkeyInput" value="Ctrl+Alt+Space" placeholder="e.g. Ctrl+Alt+Space or Win+Shift+V">
-              <button class="btn-primary" id="saveHotkeyBtn">Update Hotkey</button>
-            </div>
-            <span class="input-help">Hold the hotkey down while speaking (Push-to-Talk) or tap to start/stop.</span>
-          </div>
+          <h3>Target Application Context Permissions</h3>
+          <p class="card-desc">Control what foreground application metadata VeoFlow is permitted to capture.</p>
 
-          <div class="form-group">
-            <label>Tone Adaptation Preference</label>
-            <select id="toneSelect" class="select-input">
-              <option value="contextual">Contextual (Adaptive based on active application)</option>
-              <option value="formal">Formal & Professional</option>
-              <option value="casual">Casual & Conversational</option>
-              <option value="verbatim">Verbatim (Exact words only, no LLM tone polish)</option>
-            </select>
+          <div class="form-group toggle-group">
+            <div>
+              <label class="toggle-label">Capture Application Window Title</label>
+              <p class="toggle-desc">Allows VeoFlow to read the active window title (e.g. document name or tab title) to inform AI formatting.</p>
+            </div>
+            <input type="checkbox" id="privacyAllowWindowTitle" checked>
           </div>
 
           <div class="form-group toggle-group">
             <div>
-              <label class="toggle-label">Automatic Direct Paste</label>
-              <p class="toggle-desc">Automatically pastes formatted text directly into the focused application upon speech completion.</p>
+              <label class="toggle-label">Capture Browser URL</label>
+              <p class="toggle-desc">Allows VeoFlow to inspect web address context when dictating inside web browsers.</p>
             </div>
-            <input type="checkbox" id="autoPasteToggle" checked>
+            <input type="checkbox" id="privacyAllowBrowserUrl" checked>
+          </div>
+
+          <div class="form-group toggle-group">
+            <div>
+              <label class="toggle-label">Capture Selected Text (Disabled by default)</label>
+              <p class="toggle-desc">Permits reading currently highlighted text to support edit and rewrite voice commands.</p>
+            </div>
+            <input type="checkbox" id="privacyAllowSelectedText">
+          </div>
+
+          <div class="form-group toggle-group">
+            <div>
+              <label class="toggle-label">Capture Surrounding Text Context (Disabled by default)</label>
+              <p class="toggle-desc">Permits reading cursor surrounding paragraph context to enhance grammatical continuity.</p>
+            </div>
+            <input type="checkbox" id="privacyAllowSurroundingText">
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Custom Application Rules</h3>
+          <p class="card-desc">Define custom classification and tone behaviors for specific executables.</p>
+
+          <div class="form-row" style="margin-bottom: 14px;">
+            <input type="text" id="appRuleProcess" placeholder="Executable (e.g. slack.exe, code.exe)">
+            <select id="appRuleCategory" class="select-input">
+              <option value="chat">Chat / Messaging</option>
+              <option value="code_editor">Code Editor / IDE</option>
+              <option value="email">Email Client</option>
+              <option value="document">Document / Word Processor</option>
+              <option value="terminal">Command Terminal</option>
+              <option value="browser_form">Browser Form</option>
+              <option value="unknown">General / Unknown</option>
+            </select>
+            <select id="appRuleTone" class="select-input">
+              <option value="contextual">Contextual</option>
+              <option value="formal">Formal</option>
+              <option value="casual">Casual</option>
+              <option value="verbatim">Verbatim</option>
+            </select>
+            <button class="btn-primary" id="addAppRuleBtn">Add App Rule</button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Process Executable</th>
+                  <th>Classification Category</th>
+                  <th>Tone Policy</th>
+                  <th style="width: 100px;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="appRulesBody"></tbody>
+            </table>
           </div>
         </div>
       </section>

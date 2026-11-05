@@ -1,6 +1,6 @@
 # VeoFlow: Complete File Inventory & Architecture Mapping
 
-**Document Version:** 1.7.0  
+**Document Version:** 1.8.0  
 **Inventory Date:** November 5, 2026  
 **Engineering Governance:** Adheres to Section 3 of `VEOFLOW_ARCHITECTURE.md`.
 
@@ -129,7 +129,8 @@ veoflow/
 │   │   ├── transcription_engine.test.js # Vitest specs for fallback, language, and errors
 │   │   ├── context_engine.test.js    # Vitest specs for app classification, sanitization, privacy & HWND tracking
 │   │   ├── formatting_engine.test.js # Vitest specs for LLM adapters, prompt rules, directives & validation
-│   │   └── injection_manager.test.js # Vitest specs for target validation, UIA, clipboard restoration & auditing
+│   │   ├── injection_manager.test.js # Vitest specs for target validation, UIA, clipboard restoration & auditing
+│   │   └── ui_desktop.test.js        # Vitest specs for HUD positioning, multi-monitor bounds, 7-screen settings & tray
 │   ├── integration/
 │   │   ├── helper_ipc.test.js        # Vitest specs for native helper IPC & lifecycle
 │   │   └── notepad_live.test.js      # Vitest live integration with Notepad.exe

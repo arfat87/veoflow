@@ -1,3 +1,4 @@
+/* VeoFlow Floating HUD Stylesheet */
 * {
   margin: 0;
   padding: 0;
@@ -20,13 +21,15 @@ body {
 .widget {
   width: 340px;
   height: 56px;
-  background: #0f172a;
-  border: 2px solid #38bdf8;
+  background: rgba(11, 15, 23, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid rgba(0, 242, 254, 0.25);
   border-radius: 28px;
   display: flex;
   align-items: center;
   padding: 0 14px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.35);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 18px rgba(0, 242, 254, 0.18);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   color: #f8fafc;
 }
@@ -45,13 +48,13 @@ body {
 }
 
 .drag-handle:hover {
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .drag-dots {
   width: 4px;
   height: 14px;
-  border-left: 2px dotted #94a3b8;
+  border-left: 2px dotted #64748b;
 }
 
 /* Mic Container */
@@ -79,27 +82,29 @@ body {
   width: 18px;
   height: 18px;
   color: #94a3b8;
-  transition: color 0.2s;
+  transition: color 0.2s, opacity 0.2s;
+  z-index: 2;
 }
 
 .mic-glow {
   position: absolute;
   inset: -3px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.6) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 242, 254, 0.6) 0%, transparent 70%);
   opacity: 0;
   transition: opacity 0.3s;
 }
 
-/* Spinner for Processing */
+/* Spinner for Processing States */
 .spinner {
   position: absolute;
   inset: 0;
   border: 2px solid transparent;
-  border-top-color: #38bdf8;
+  border-top-color: #00f2fe;
   border-radius: 50%;
   opacity: 0;
   animation: spin 0.8s linear infinite;
+  z-index: 3;
 }
 
 @keyframes spin {
@@ -123,21 +128,21 @@ body {
   margin: auto;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s ease-in-out;
 }
 
 .text-display {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s ease-in-out;
 }
 
 .status-badge {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: #64748b;
   margin-bottom: 1px;
 }
@@ -162,8 +167,8 @@ body {
 .btn-icon {
   background: none;
   border: none;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -183,75 +188,128 @@ body {
   height: 15px;
 }
 
-/* STATES */
+/* ==========================================================================
+   ALL 9 HUD VISUAL STATES
+   ========================================================================== */
 
-/* 1. Recording */
-.state-recording {
-  border-color: rgba(56, 189, 248, 0.4);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.25);
+/* 1. Idle */
+.state-idle {
+  border-color: rgba(0, 242, 254, 0.25);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 18px rgba(0, 242, 254, 0.18);
 }
+.state-idle .status-badge { color: #64748b; }
+.state-idle .icon-mic { color: #94a3b8; }
 
+/* 2. Preparing */
+.state-preparing {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+.state-preparing .spinner {
+  opacity: 1;
+  border-top-color: #38bdf8;
+}
+.state-preparing .icon-mic { opacity: 0.4; }
+.state-preparing .status-badge { color: #38bdf8; }
+
+/* 3. Recording (Listening) */
+.state-recording {
+  border-color: rgba(0, 242, 254, 0.65);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 24px rgba(0, 242, 254, 0.4);
+}
 .state-recording .mic-glow {
   opacity: 1;
-  background: radial-gradient(circle, rgba(239, 68, 68, 0.8) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.85) 0%, transparent 70%);
   animation: pulse 1.2s infinite alternate ease-in-out;
 }
-
 .state-recording .icon-mic {
   color: #ef4444;
 }
-
 .state-recording #visualizer {
   opacity: 1;
 }
-
 .state-recording .text-display {
-  opacity: 0.15;
+  opacity: 0.12;
 }
 
 @keyframes pulse {
-  0% { transform: scale(0.9); opacity: 0.5; }
-  100% { transform: scale(1.25); opacity: 0.9; }
+  0% { transform: scale(0.92); opacity: 0.5; }
+  100% { transform: scale(1.22); opacity: 0.95; }
 }
 
-/* 2. Processing / Transcribing */
-.state-processing .spinner,
+/* 4. Stopping */
+.state-stopping {
+  border-color: rgba(148, 163, 184, 0.4);
+}
+.state-stopping .spinner {
+  opacity: 1;
+  border-top-color: #94a3b8;
+}
+.state-stopping .icon-mic { opacity: 0.3; }
+.state-stopping .status-badge { color: #94a3b8; }
+
+/* 5. Transcribing / Processing */
+.state-transcribing,
+.state-processing {
+  border-color: rgba(0, 242, 254, 0.5);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 242, 254, 0.3);
+}
 .state-transcribing .spinner,
+.state-processing .spinner {
+  opacity: 1;
+  border-top-color: #00f2fe;
+}
+.state-transcribing .icon-mic,
+.state-processing .icon-mic { opacity: 0.25; }
+.state-transcribing .status-badge,
+.state-processing .status-badge { color: #00f2fe; }
+
+/* 6. Formatting */
+.state-formatting {
+  border-color: rgba(168, 85, 247, 0.55);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(168, 85, 247, 0.3);
+}
 .state-formatting .spinner {
   opacity: 1;
+  border-top-color: #a855f7;
 }
-
-.state-processing .icon-mic,
-.state-transcribing .icon-mic,
-.state-formatting .icon-mic {
-  opacity: 0.3;
-}
-
-.state-transcribing .status-badge { color: #38bdf8; }
+.state-formatting .icon-mic { opacity: 0.25; }
 .state-formatting .status-badge { color: #a855f7; }
 
-/* 3. Pasting */
+/* 7. Inserting / Pasting */
+.state-inserting,
 .state-pasting {
-  border-color: rgba(168, 85, 247, 0.4);
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(59, 130, 246, 0.3);
 }
-.state-pasting .status-badge { color: #c084fc; }
+.state-inserting .spinner,
+.state-pasting .spinner {
+  opacity: 1;
+  border-top-color: #3b82f6;
+}
+.state-inserting .icon-mic,
+.state-pasting .icon-mic { opacity: 0.25; }
+.state-inserting .status-badge,
+.state-pasting .status-badge { color: #60a5fa; }
 
-/* 4. Success */
+/* 8. Completed / Success */
+.state-completed,
 .state-success {
-  border-color: rgba(34, 197, 94, 0.4);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(34, 197, 94, 0.3);
+  border-color: rgba(34, 197, 94, 0.55);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 22px rgba(34, 197, 94, 0.35);
 }
-
+.state-completed .icon-mic,
 .state-success .icon-mic {
   color: #22c55e;
 }
+.state-completed .status-badge,
 .state-success .status-badge { color: #4ade80; }
 
-/* 5. Error */
+/* 9. Error */
 .state-error {
-  border-color: rgba(245, 158, 11, 0.4);
+  border-color: rgba(239, 68, 68, 0.55);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(239, 68, 68, 0.35);
 }
 .state-error .icon-mic {
-  color: #f59e0b;
+  color: #ef4444;
 }
-.state-error .status-badge { color: #fbbf24; }
+.state-error .status-badge { color: #f87171; }

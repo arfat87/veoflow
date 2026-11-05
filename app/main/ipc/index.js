@@ -9,7 +9,8 @@ import {
   AudioPayloadSchema,
   SettingPayloadSchema,
   DictionaryWordSchema,
-  SnippetSchema
+  SnippetSchema,
+  AppRuleSchema
 } from '../../shared/validation.js';
 
 export function registerIpcHandlers({
@@ -173,9 +174,22 @@ export function registerIpcHandlers({
 
   // History handlers
   ipcMain.handle('get-history', () => db.getHistory());
+  ipcMain.handle('delete-history-item', (e, id) => db.deleteHistoryItem(Number(id)));
   ipcMain.handle('clear-history', () => {
     db.clearHistory();
     return true;
+  });
+
+  // AI Connection Test
+  ipcMain.handle('test-ai-connection', async (e, provider) => {
+    try {
+      if (typeof ai.testConnection === 'function') {
+        return await ai.testConnection(provider);
+      }
+      return { success: false, message: 'testConnection not implemented on AI service', latencyMs: 0 };
+    } catch (err) {
+      return { success: false, message: err.message, latencyMs: 0 };
+    }
   });
 
   // Dictionary handlers
@@ -204,8 +218,29 @@ export function registerIpcHandlers({
   });
   ipcMain.handle('delete-snippet', (e, id) => db.deleteSnippet(Number(id)));
 
+  // Application Rules handlers (Privacy & Permissions)
+  ipcMain.handle('get-app-rules', () => db.getAppRules());
+  ipcMain.handle('add-app-rule', (e, payload) => {
+    const parseResult = AppRuleSchema.safeParse(payload);
+    if (!parseResult.success) {
+      logger.warn('Invalid add-app-rule payload', parseResult.error.format());
+      return false;
+    }
+    const { processName, category, tone } = parseResult.data;
+    return db.addAppRule(processName, category, tone);
+  });
+  ipcMain.handle('delete-app-rule', (e, id) => db.deleteAppRule(Number(id)));
+
   // Window actions
   ipcMain.handle('open-settings', () => windowManager.createSettingsWindow());
+  ipcMain.handle('open-hud', () => {
+    const overlay = windowManager.getOverlayWindow() || windowManager.createOverlayWindow();
+    if (overlay && !overlay.isDestroyed()) {
+      overlay.showInactive();
+      return true;
+    }
+    return false;
+  });
   ipcMain.handle('close-overlay', () => {
     const overlay = windowManager.getOverlayWindow();
     if (overlay && !overlay.isDestroyed()) {

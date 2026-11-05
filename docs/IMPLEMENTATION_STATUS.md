@@ -1,6 +1,6 @@
 # VeoFlow: Implementation Status Matrix
 
-**Document Version:** 1.7.0  
+**Document Version:** 1.8.0  
 **Last Updated:** November 5, 2026  
 **Status Key:**
 
@@ -27,7 +27,7 @@
 | **Smart Text Injection Engine**      |  `COMPLETE`   | Target revalidation, UIA, safe clipboard restore, transaction audits       | Phase 07                               |
 | **JSON-RPC IPC Engine**              |  `COMPLETE`   | Versioned protocol, request IDs, error codes, auto parent disconnect       | Phase 02                               |
 | **Audio Capture Engine**             |  `COMPLETE`   | Web Audio API, AnalyserNode, MediaRecorder, 5-min ceiling, mic select      | Phase 03                               |
-| **Waveform Visualization**           |  `COMPLETE`   | 60 FPS HTML5 Canvas FFT visualizer driven by real-time audio               | Phase 03 / Phase 08                    |
+| **Waveform Visualization**           |  `COMPLETE`   | 60 FPS HTML5 Canvas FFT visualizer driven by real-time audio (High-DPI)    | Phase 03 / Phase 08                    |
 | **Audio Analysis & Silence Detect**  |  `COMPLETE`   | RMS power calculation, dBFS thresholding, linear resampler                 | Phase 03                               |
 | **WAV Audio Encoding**               |  `COMPLETE`   | Pure JS 16-bit linear PCM WAV encoder & parser (`wav-encoder.js`)          | Phase 03                               |
 | **Audio Worker Threads**             |  `COMPLETE`   | Background worker (`audio-worker.js`) offloading CPU-intensive encoding    | Phase 03                               |
@@ -41,12 +41,13 @@
 | **Prompt Injection Sanitizer**       |  `COMPLETE`   | Strip role/system delimiters, control characters, bound length             | Phase 05                               |
 | **Target HWND Tracking**             |  `COMPLETE`   | Window change detection between recording and injection                    | Phase 05                               |
 | **User Application Rules**           |  `COMPLETE`   | Custom database overrides for process classification                       | Phase 05                               |
-| **Automated Testing Harness**        |  `COMPLETE`   | 7/7 native C# tests + 111 Vitest unit/integration tests (118/118 total)    | Phase 01 / 02 / 03 / 04 / 05 / 06 / 07 |
+| **Automated Testing Harness**        |  `COMPLETE`   | 7/7 native C# tests + 123 Vitest unit/integration tests (130/130 total)    | Phase 01 - Phase 08                    |
 | **Contextual Formatter Engine**      |  `COMPLETE`   | Multi-app tone matching (IDE, Terminal, Chat, Email, Docs), v2026.11.05-v1 | Phase 06                               |
 | **Instruction Mode & Directives**    |  `COMPLETE`   | Grammar fix, translation, bullet lists, rephrasing, response validation    | Phase 06                               |
 | **Custom Vocabulary & Snippets**     |  `COMPLETE`   | Whole-word regex substitution ($1 injection safe) & snippet expansion      | Phase 06                               |
-| **Floating HUD Pill**                |  `COMPLETE`   | Frameless, glassmorphic, non-stealing overlay                              | Phase 08                               |
-| **Settings Dashboard**               |  `COMPLETE`   | Tabbed HTML/CSS UI with safe DOM event delegation                          | Phase 08 / Phase 09                    |
+| **Floating HUD Pill**                |  `COMPLETE`   | Frameless, transparent, non-stealing, draggable, 9 states, multi-monitor   | Phase 08                               |
+| **Settings Dashboard**               |  `COMPLETE`   | 7 fully functional sections: Dashboard, AI, History, Audio, Dict, Snippets, Privacy | Phase 08                               |
+| **System Tray Subsystem**            |  `COMPLETE`   | 5 menu actions (Open, Start, Stop, Settings, Exit) with click/double-click  | Phase 08                               |
 | **Local Persistence**                |   `PARTIAL`   | Atomic JSON store (`~/.veoflow/veoflow_store.json`)                        | Phase 09 (SQLite)                      |
 | **Credential Protection**            | `NOT STARTED` | Plaintext in local store                                                   | Phase 10 (DPAPI)                       |
 | **Windows Packaging**                | `NOT STARTED` | Direct execution                                                           | Phase 12 (electron-builder NSIS)       |
@@ -57,5 +58,5 @@
 
 - **Milestone 1: Native Dictation Foundation (Phases 01–04):** `100% Complete` (Phases 01, 02, 03, and 04 all delivered and verified).
 - **Milestone 2: Intelligent Dictation (Phases 05–07):** `100% Complete` (Phases 05 Context Detection, 06 Contextual AI Formatter, and 07 Smart Text Injection all completed and verified).
-- **Milestone 3: Complete Desktop Product (Phases 08–09):** `65% Complete` (HUD and settings complete; needs SQLite migration in Phase 09).
+- **Milestone 3: Complete Desktop Product (Phases 08–09):** `80% Complete` (Phase 08 Floating HUD & 7-screen Settings Dashboard complete; awaiting Phase 09 SQLite migration).
 - **Milestone 4: Production Release (Phases 10–12):** `25% Complete` (Vitest & C# test runners active; needs DPAPI and NSIS bundling).

@@ -252,6 +252,16 @@ export class AIService {
     return this.formattingEngine.dictionaryService.applyDictionary(text);
   }
 
+  // Test connection to AI provider
+  async testConnection(providerName) {
+    const prov = (providerName || '').toLowerCase();
+    const provider = this.transcriptionEngine.getProvider(prov);
+    if (!provider) {
+      return { success: false, message: `Unknown provider: ${providerName}`, latencyMs: 0 };
+    }
+    return await provider.testConnection();
+  }
+
   escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }

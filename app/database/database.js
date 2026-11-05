@@ -62,6 +62,13 @@ export class DatabaseManager {
     this.setDefaultSetting('hotkey', 'Ctrl+Alt+Space');
     this.setDefaultSetting('auto_paste', 'true');
     this.setDefaultSetting('tone_preference', 'contextual');
+    this.setDefaultSetting('allow_fallback', 'true');
+    this.setDefaultSetting('launch_at_startup', 'false');
+    this.setDefaultSetting('audio_device_id', 'default');
+    this.setDefaultSetting('privacy_allow_window_title', 'true');
+    this.setDefaultSetting('privacy_allow_selected_text', 'false');
+    this.setDefaultSetting('privacy_allow_surrounding_text', 'false');
+    this.setDefaultSetting('privacy_allow_browser_url', 'true');
     this.save();
   }
 
@@ -87,7 +94,7 @@ export class DatabaseManager {
   // History operations
   addHistory({ appName, windowTitle, url, rawAsr, formattedText, latencyMs, status }) {
     const entry = {
-      id: Date.now(),
+      id: Date.now() + Math.floor(Math.random() * 10000),
       timestamp: new Date().toISOString(),
       app_name: appName || '',
       window_title: windowTitle || '',
@@ -108,6 +115,13 @@ export class DatabaseManager {
 
   getHistory(limit = 50) {
     return this.data.history.slice(0, limit);
+  }
+
+  deleteHistoryItem(id) {
+    const initialLen = this.data.history.length;
+    this.data.history = this.data.history.filter(h => h.id !== Number(id));
+    this.save();
+    return this.data.history.length < initialLen;
   }
 
   clearHistory() {

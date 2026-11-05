@@ -3,31 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VeoFlow Widget</title>
+  <title>VeoFlow Floating HUD</title>
   <link rel="stylesheet" href="overlay.css">
 </head>
 <body>
-  <div id="widget" class="widget state-idle">
+  <div id="widget" class="widget state-idle" role="region" aria-label="VeoFlow Floating HUD">
     <!-- Drag Handle -->
-    <div class="drag-handle">
+    <div class="drag-handle" title="Drag to reposition HUD" aria-label="Drag handle">
       <div class="drag-dots"></div>
     </div>
 
     <!-- Status Icon / Mic -->
-    <div class="mic-container" id="micBtn" title="Click to toggle dictation">
+    <div class="mic-container" id="micBtn" role="button" tabindex="0" title="Click to toggle dictation" aria-label="Toggle voice dictation">
       <div class="mic-glow"></div>
-      <svg class="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg class="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
         <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
         <line x1="12" y1="19" x2="12" y2="22"/>
       </svg>
-      <div class="spinner"></div>
+      <div class="spinner" aria-hidden="true"></div>
     </div>
 
     <!-- Center Info / Waveform / Text Preview -->
     <div class="center-content">
-      <!-- Waveform Canvas -->
-      <canvas id="visualizer" width="160" height="28"></canvas>
+      <!-- High-DPI Waveform Canvas -->
+      <canvas id="visualizer" width="160" height="28" aria-label="Audio Visualizer"></canvas>
 
       <!-- Text State Display -->
       <div class="text-display">
@@ -38,8 +38,8 @@
 
     <!-- Action Buttons -->
     <div class="actions">
-      <button class="btn-icon" id="settingsBtn" title="Settings & History">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <button class="btn-icon" id="settingsBtn" title="Settings & Dashboard" aria-label="Open Settings and Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
         </svg>

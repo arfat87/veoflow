@@ -24,7 +24,11 @@ contextBridge.exposeInMainWorld('veoflow', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSetting: (key, value) => ipcRenderer.invoke('save-setting', { key, value }),
   getHistory: () => ipcRenderer.invoke('get-history'),
+  deleteHistoryItem: (id) => ipcRenderer.invoke('delete-history-item', id),
   clearHistory: () => ipcRenderer.invoke('clear-history'),
+
+  // AI Connection Test
+  testAiConnection: (provider) => ipcRenderer.invoke('test-ai-connection', provider),
 
   // Custom Vocabulary & Snippets
   getDictionary: () => ipcRenderer.invoke('get-dictionary'),
@@ -34,8 +38,14 @@ contextBridge.exposeInMainWorld('veoflow', {
   addSnippet: (shortcut, text) => ipcRenderer.invoke('add-snippet', { shortcut, text }),
   deleteSnippet: (id) => ipcRenderer.invoke('delete-snippet', id),
 
+  // Application Rules (Privacy & Permissions)
+  getAppRules: () => ipcRenderer.invoke('get-app-rules'),
+  addAppRule: (processName, category, tone) => ipcRenderer.invoke('add-app-rule', { processName, category, tone }),
+  deleteAppRule: (id) => ipcRenderer.invoke('delete-app-rule', id),
+
   // Window management
   openSettings: () => ipcRenderer.invoke('open-settings'),
+  openHud: () => ipcRenderer.invoke('open-hud'),
   closeOverlay: () => ipcRenderer.invoke('close-overlay')
 });
 

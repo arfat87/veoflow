@@ -97,10 +97,18 @@ const dictationState = {
   }
 };
 
-const trayManager = new TrayManager(
-  () => dictationState.toggleDictation(),
-  () => windowManager.createSettingsWindow()
-);
+const trayManager = new TrayManager({
+  onOpenVeoFlow: () => {
+    const overlay = windowManager.getOverlayWindow() || windowManager.createOverlayWindow();
+    if (overlay && !overlay.isDestroyed()) {
+      overlay.showInactive();
+    }
+  },
+  onStartDictation: () => dictationState.startDictation(),
+  onStopDictation: () => dictationState.stopDictation(),
+  onOpenSettings: () => windowManager.createSettingsWindow(),
+  onExit: () => app.quit()
+});
 
 const hotkeyManager = new HotkeyManager(
   db,

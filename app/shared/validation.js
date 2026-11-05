@@ -16,6 +16,12 @@ export const SnippetSchema = z.object({
   text: z.string().min(1).max(10000)
 });
 
+export const AppRuleSchema = z.object({
+  processName: z.string().min(1).max(200),
+  category: z.string().min(1).max(100).default('unknown'),
+  tone: z.string().min(1).max(50).default('contextual')
+});
+
 export const SubmitAudioSchema = z.object({
   audioData: z.union([
     z.instanceof(Uint8Array),
