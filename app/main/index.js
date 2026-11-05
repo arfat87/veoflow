@@ -12,6 +12,7 @@ import helper from '../core/helperClient.js';
 import ai from '../core/aiService.js';
 import db from '../database/database.js';
 import diffPaster from '../core/diffPaster.js';
+import contextEngine from '../core/context/context-engine.js';
 import logger from '../shared/logger.js';
 
 logger.info('Initializing VeoFlow Main Process...');
@@ -45,19 +46,23 @@ const dictationState = {
       });
     }
 
-    // 2. Fetch context in parallel
+    // 2. Fetch context in parallel and process via ContextEngine
     try {
-      this.currentContext = await helper.getContext();
-      logger.info(`Captured Active Context: ${this.currentContext.appName} - ${this.currentContext.windowTitle}`);
+      const rawContext = await helper.getContext();
+      this.currentContext = contextEngine.processContext(this.sessionId, rawContext);
+      logger.info(`Captured Context: ${this.currentContext.application.name} [${this.currentContext.application.category}] - ${this.currentContext.window.title}`);
       if (overlay && !overlay.isDestroyed() && this.isRecording) {
         overlay.webContents.send('state-change', {
           state: 'recording',
-          context: this.currentContext
+          context: {
+            appName: this.currentContext.application.displayName,
+            windowTitle: this.currentContext.window.title
+          }
         });
       }
     } catch (err) {
       logger.warn('Failed to fetch window context:', err.message);
-      this.currentContext = { appName: 'Unknown', windowTitle: '', url: '', textbox: {} };
+      this.currentContext = contextEngine.processContext(this.sessionId, {});
     }
   },
 

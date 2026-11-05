@@ -4,6 +4,7 @@
  */
 import { ipcMain } from 'electron';
 import logger from '../../shared/logger.js';
+import defaultAudioManager from '../../core/audio/audio-manager.js';
 import {
   AudioPayloadSchema,
   SettingPayloadSchema,
@@ -69,6 +70,10 @@ export function registerIpcHandlers({
       }
 
       const audioBuffer = Buffer.from(audioData);
+      const ext = (mimeType && mimeType.includes('wav')) ? 'wav' : 'webm';
+      const savedAudioPath = defaultAudioManager.saveRecording(audioBuffer, ext);
+      logger.info(`Recording preserved at: ${savedAudioPath}`);
+
       rawAsr = await ai.transcribeAudio(audioBuffer, mimeType);
       logger.info(`Raw Speech-To-Text result: ${rawAsr}`);
 
@@ -96,10 +101,11 @@ export function registerIpcHandlers({
       }
 
       const latencyMs = Date.now() - startTime;
+      const ctx = dictationState.currentContext;
       db.addHistory({
-        appName: dictationState.currentContext?.appName,
-        windowTitle: dictationState.currentContext?.windowTitle,
-        url: dictationState.currentContext?.url,
+        appName: ctx?.application?.name || ctx?.appName,
+        windowTitle: ctx?.window?.title ?? ctx?.windowTitle,
+        url: ctx?.window?.url ?? ctx?.url,
         rawAsr,
         formattedText,
         latencyMs,
@@ -130,10 +136,11 @@ export function registerIpcHandlers({
         }, 3000);
       }
 
+      const ctx = dictationState.currentContext;
       db.addHistory({
-        appName: dictationState.currentContext?.appName,
-        windowTitle: dictationState.currentContext?.windowTitle,
-        url: dictationState.currentContext?.url,
+        appName: ctx?.application?.name || ctx?.appName,
+        windowTitle: ctx?.window?.title ?? ctx?.windowTitle,
+        url: ctx?.window?.url ?? ctx?.url,
         rawAsr: rawAsr || '',
         formattedText: err.message,
         latencyMs: Date.now() - startTime,

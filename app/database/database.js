@@ -19,7 +19,8 @@ export class DatabaseManager {
       settings: {},
       history: [],
       dictionary: [],
-      snippets: []
+      snippets: [],
+      app_rules: []
     };
     this.load();
     this.initDefaults();
@@ -34,7 +35,8 @@ export class DatabaseManager {
           settings: parsed.settings || {},
           history: parsed.history || [],
           dictionary: parsed.dictionary || [],
-          snippets: parsed.snippets || []
+          snippets: parsed.snippets || [],
+          app_rules: parsed.app_rules || []
         };
       }
     } catch (err) {
@@ -171,6 +173,42 @@ export class DatabaseManager {
 
   deleteSnippet(id) {
     this.data.snippets = this.data.snippets.filter(s => s.id !== Number(id));
+    this.save();
+    return true;
+  }
+
+  // User-Defined Application Rules
+  getAppRules() {
+    return [...(this.data.app_rules || [])];
+  }
+
+  addAppRule(processName, category, tone = 'contextual') {
+    const proc = (processName || '').trim().toLowerCase();
+    const cat = (category || 'unknown').trim().toLowerCase();
+    if (!this.data.app_rules) this.data.app_rules = [];
+
+    const idx = this.data.app_rules.findIndex(r => r.process_name.toLowerCase() === proc);
+    let id;
+    if (idx >= 0) {
+      this.data.app_rules[idx].category = cat;
+      this.data.app_rules[idx].tone = tone;
+      id = this.data.app_rules[idx].id;
+    } else {
+      id = Date.now() + Math.floor(Math.random() * 1000);
+      this.data.app_rules.push({
+        id,
+        process_name: proc,
+        category: cat,
+        tone: tone
+      });
+    }
+    this.save();
+    return id;
+  }
+
+  deleteAppRule(id) {
+    if (!this.data.app_rules) return true;
+    this.data.app_rules = this.data.app_rules.filter(r => r.id !== Number(id));
     this.save();
     return true;
   }

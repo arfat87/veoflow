@@ -1,3 +1,9 @@
+/**
+ * VeoFlow Floating HUD Controller (ESM)
+ * Connects AudioCaptureEngine with canvas visualizer and main process state transitions.
+ */
+import { AudioCaptureEngine } from './audio-capture.js';
+
 const widget = document.getElementById('widget');
 const micBtn = document.getElementById('micBtn');
 const settingsBtn = document.getElementById('settingsBtn');
@@ -6,71 +12,27 @@ const statusText = document.getElementById('statusText');
 const canvas = document.getElementById('visualizer');
 const canvasCtx = canvas.getContext('2d');
 
-let mediaRecorder = null;
-let audioChunks = [];
-let audioContext = null;
-let analyser = null;
-let animationFrameId = null;
 let isRecording = false;
 
-// Initialize Visualizer Audio Graph
-async function initAudio() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
-
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioContext.createMediaStreamSource(stream);
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 64;
-    source.connect(analyser);
-
-    // Setup MediaRecorder
-    let mimeType = 'audio/webm;codecs=opus';
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      mimeType = 'audio/webm';
-    }
-
-    mediaRecorder = new MediaRecorder(stream, { mimeType });
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) {
-        audioChunks.push(e.data);
-      }
-    };
-
-    mediaRecorder.onstop = async () => {
-      const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
-      audioChunks = [];
-      const arrayBuffer = await blob.arrayBuffer();
-      const uint8 = new Uint8Array(arrayBuffer);
-
-      console.log('[Overlay] Submitting recorded audio, size:', uint8.length);
-      window.veoflow.submitAudio(uint8, mediaRecorder.mimeType);
-    };
-
-    console.log('[Overlay] Audio initialized successfully');
-  } catch (err) {
-    console.error('[Overlay] Microphone access error:', err);
-    updateStateUI('error', { message: 'Mic permission denied' });
+// Initialize Audio Engine
+const audioEngine = new AudioCaptureEngine({
+  maxDurationMs: 300000,
+  onWaveformData: (dataArray) => {
+    drawWaveform(dataArray);
+  },
+  onMaxDurationExceeded: () => {
+    window.veoflow.stopRecording();
+  },
+  onError: (err) => {
+    updateStateUI('error', { message: 'Microphone error: ' + err.message });
   }
-}
+});
 
-// Waveform visualizer loop
-function drawWaveform() {
-  if (!analyser) return;
-
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength);
-  analyser.getByteFrequencyData(dataArray);
-
+// Canvas Waveform Renderer
+function drawWaveform(dataArray) {
   canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
+  const bufferLength = dataArray.length;
   const barWidth = 4;
   const barGap = 3;
   const barCount = Math.floor(canvas.width / (barWidth + barGap));
@@ -84,50 +46,16 @@ function drawWaveform() {
     const x = i * (barWidth + barGap);
     const y = (canvas.height - barHeight) / 2;
 
-    const hue = 190 + (percent * 50); // Cyan to blue gradient
+    const hue = 190 + (percent * 50); // Cyan to electric blue gradient
     canvasCtx.fillStyle = `hsl(${hue}, 90%, 60%)`;
 
-    // Rounded pill bars
     canvasCtx.beginPath();
     canvasCtx.roundRect(x, y, barWidth, barHeight, 2);
     canvasCtx.fill();
   }
-
-  if (isRecording) {
-    animationFrameId = requestAnimationFrame(drawWaveform);
-  } else {
-    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-  }
 }
 
-function startRecording() {
-  if (isRecording) return;
-  isRecording = true;
-  audioChunks = [];
-
-  if (audioContext && audioContext.state === 'suspended') {
-    audioContext.resume();
-  }
-
-  if (mediaRecorder && mediaRecorder.state === 'inactive') {
-    mediaRecorder.start(100);
-  }
-
-  drawWaveform();
-}
-
-function stopRecording() {
-  if (!isRecording) return;
-  isRecording = false;
-
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    mediaRecorder.stop();
-  }
-
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = null;
-  }
+function clearWaveform() {
   canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
@@ -139,21 +67,53 @@ function updateStateUI(state, payload = {}) {
     case 'idle':
       statusBadge.textContent = 'VeoFlow';
       statusText.textContent = payload.message || 'Ctrl+Alt+Space';
-      stopRecording();
+      if (isRecording) {
+        isRecording = false;
+        audioEngine.cancel();
+      }
+      clearWaveform();
+      break;
+
+    case 'preparing':
+      statusBadge.textContent = 'Preparing';
+      statusText.textContent = 'Connecting mic...';
       break;
 
     case 'recording':
       statusBadge.textContent = 'Listening';
       const targetApp = payload.context?.appName ? payload.context.appName.replace('.exe', '') : 'Active Window';
       statusText.textContent = `Speaking to ${targetApp}...`;
-      startRecording();
+      isRecording = true;
+      audioEngine.start();
       break;
 
+    case 'stopping':
     case 'processing':
     case 'transcribing':
       statusBadge.textContent = 'Transcribing';
       statusText.textContent = 'Processing speech...';
-      stopRecording();
+      if (isRecording) {
+        isRecording = false;
+        audioEngine.stop().then(async (result) => {
+          if (result && result.blob) {
+            const arrayBuffer = await result.blob.arrayBuffer();
+            const uint8 = new Uint8Array(arrayBuffer);
+            window.veoflow.submitAudio(uint8, result.mimeType);
+          }
+        });
+      }
+      clearWaveform();
+      break;
+
+    case 'cancelled':
+      statusBadge.textContent = 'Cancelled';
+      statusText.textContent = 'Dictation discarded';
+      isRecording = false;
+      audioEngine.cancel();
+      clearWaveform();
+      setTimeout(() => {
+        updateStateUI('idle');
+      }, 1200);
       break;
 
     case 'formatting':
@@ -174,7 +134,9 @@ function updateStateUI(state, payload = {}) {
     case 'error':
       statusBadge.textContent = 'Error';
       statusText.textContent = payload.message || 'Failed to dictate';
-      stopRecording();
+      isRecording = false;
+      audioEngine.cancel();
+      clearWaveform();
       break;
   }
 }
@@ -199,7 +161,7 @@ settingsBtn.addEventListener('click', () => {
   window.veoflow.openSettings();
 });
 
-// Init mic on startup
+// Warm up audio capture on page load
 window.addEventListener('DOMContentLoaded', () => {
-  initAudio();
+  audioEngine.initStream();
 });

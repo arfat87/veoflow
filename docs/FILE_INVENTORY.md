@@ -1,6 +1,6 @@
 # VeoFlow: Complete File Inventory & Architecture Mapping
 
-**Document Version:** 1.2.0  
+**Document Version:** 1.5.0  
 **Inventory Date:** November 5, 2026  
 **Engineering Governance:** Adheres to Section 3 of `VEOFLOW_ARCHITECTURE.md`.
 
@@ -36,6 +36,7 @@ veoflow/
 │   │
 │   ├── renderer/
 │   │   ├── hud/
+│   │   │   ├── audio-capture.js      # Web Audio API engine, AnalyserNode, MediaRecorder, duration limit
 │   │   │   ├── overlay.html          # Floating HUD markup structure
 │   │   │   ├── overlay.css           # Glassmorphic HUD styling and animations
 │   │   │   └── overlay.js            # HUD state machine, canvas FFT waveform, and mic recording
@@ -46,15 +47,28 @@ veoflow/
 │   │   └── styles/
 │   │
 │   ├── core/
+│   │   ├── audio/                    # Phase 03 Audio Subsystem
+│   │   │   ├── wav-encoder.js        # Pure 16-bit linear PCM WAV RIFF encoder and parser
+│   │   │   ├── audio-utils.js        # RMS calculation, dBFS analysis, silence detection, resampler
+│   │   │   ├── audio-worker.js       # Background Worker Thread offloading CPU-intensive audio encoding
+│   │   │   └── audio-manager.js      # Recording persistence in ~/.veoflow/recordings/, rotation & recovery
+│   │   ├── providers/                # Phase 04 AI Provider Adapters
+│   │   │   ├── errors.js             # Normalized errors (Authentication, RateLimit, Server, Network, Timeout)
+│   │   │   ├── base-provider.js      # Abstract AIProvider contract
+│   │   │   ├── groq-provider.js      # Groq Whisper Large v3 Turbo adapter
+│   │   │   ├── openai-provider.js    # OpenAI Whisper-1 adapter
+│   │   │   └── gemini-provider.js    # Google Gemini 2.5 Flash multimodal adapter
+│   │   ├── transcription/            # Phase 04 Transcription Subsystem
+│   │   │   └── transcription-engine.js # Provider routing, fallback hierarchy, raw transcript preservation
 │   │   ├── helperClient.js           # Subprocess client for VeoFlowHelper.exe (JSON-RPC over stdio)
 │   │   ├── aiService.js              # Multi-provider STT and contextual LLM formatter
 │   │   ├── diffPaster.js             # diff-match-patch wrapper for incremental/full text pasting
-│   │   ├── audio/                    # Reserved for Phase 03 audio engine modularization
-│   │   ├── transcription/            # Reserved for Phase 04 STT provider interfaces
+│   │   ├── context/                  # Phase 05 Application Context Subsystem
+│   │   │   ├── app-classifier.js     # Semantic application classification & rule overrides
+│   │   │   ├── context-sanitizer.js  # Prompt injection token neutralization, control char stripping, bounding
+│   │   │   └── context-engine.js     # Privacy permission filtering, HWND change tracking, context envelopes
 │   │   ├── formatting/               # Reserved for Phase 06 contextual prompt engine
-│   │   ├── context/                  # Reserved for Phase 05 target context classification
 │   │   ├── injection/                # Reserved for Phase 07 text injection strategies
-│   │   ├── providers/                # Reserved for pluggable provider adapters
 │   │   └── pipeline/                 # Reserved for dictation state machine orchestration
 │   │
 │   ├── database/
@@ -63,7 +77,7 @@ veoflow/
 │   ├── security/                     # Reserved for Phase 10 DPAPI credential protection
 │   │
 │   └── shared/
-│       ├── constants.js              # PIPELINE_STATES, HOTKEY_MODES, DEFAULT_CONFIG, IPC_CHANNELS
+│       ├── constants.js              # PIPELINE_STATES, HOTKEY_MODES, DEFAULT_CONFIG, PROVIDERS, MODELS
 │       ├── logger.js                 # Structured JSON logging to stdout and file
 │       └── validation.js             # Zod validation schemas for IPC envelopes
 │
@@ -95,12 +109,24 @@ veoflow/
 │   ├── unit/
 │   │   ├── constants.test.js         # Vitest specs for shared constants
 │   │   ├── validation.test.js        # Vitest specs for Zod validation schemas
-│   │   └── database.test.js          # Vitest specs for isolated database CRUD
+│   │   ├── database.test.js          # Vitest specs for isolated database CRUD
+│   │   ├── wav_encoder.test.js       # Vitest specs for WAV header encoding and parsing
+│   │   ├── audio_utils.test.js       # Vitest specs for RMS, dBFS, silence, and duration limits
+│   │   ├── audio_manager.test.js     # Vitest specs for recording persistence & worker threads
+│   │   ├── audio_capture_state.test.js # Vitest specs for client audio engine state transitions
+│   │   ├── providers.test.js         # Vitest specs for Groq, OpenAI, Gemini adapters
+│   │   ├── transcription_engine.test.js # Vitest specs for fallback, language, and errors
+│   │   └── context_engine.test.js    # Vitest specs for app classification, sanitization, privacy & HWND tracking
 │   ├── integration/
 │   │   ├── helper_ipc.test.js        # Vitest specs for native helper IPC & lifecycle
 │   │   └── notepad_live.test.js      # Vitest live integration with Notepad.exe
-│   ├── e2e/
-│   └── fixtures/
+│   ├── fixtures/
+│   │   ├── generate_fixtures.js      # Audio test fixtures generator script
+│   │   ├── silence_16k.wav           # 16kHz mono pure silence WAV fixture (32 KB)
+│   │   ├── sine_440hz_16k.wav        # 16kHz mono 440Hz tone WAV fixture (32 KB)
+│   │   ├── noisy_16k.wav             # 16kHz mono random noise WAV fixture (32 KB)
+│   │   └── short_burst_16k.wav       # 16kHz mono 300ms burst WAV fixture (9.6 KB)
+│   └── e2e/
 │
 └── docs/                             # Engineering governance & audit documentation
     ├── PROJECT_AUDIT.md              # In-depth subsystem audit
@@ -114,10 +140,10 @@ veoflow/
 
 ## 2. Dependencies & Build Tools Inventory
 
-| Package | Version | Type | Function |
-| :--- | :---: | :---: | :--- |
-| `electron` | `^34.2.0` | Dev | Cross-platform desktop application container |
-| `vite` | `^8.3.6` | Dev | High-performance bundling and asset pipeline |
-| `vitest` | `^5.1.0` | Dev | Fast unit and integration test runner |
-| `zod` | `^4.6.7` | Dev | Strict runtime validation schemas for IPC & settings |
-| `diff-match-patch`| `^1.0.5` | Prod | High-efficiency diff calculation for incremental text injection |
+| Package            |  Version  | Type | Function                                                        |
+| :----------------- | :-------: | :--: | :-------------------------------------------------------------- |
+| `electron`         | `^34.2.0` | Dev  | Cross-platform desktop application container                    |
+| `vite`             | `^8.3.6`  | Dev  | High-performance bundling and asset pipeline                    |
+| `vitest`           | `^5.1.0`  | Dev  | Fast unit and integration test runner                           |
+| `zod`              | `^4.6.7`  | Dev  | Strict runtime validation schemas for IPC & settings            |
+| `diff-match-patch` | `^1.0.5`  | Prod | High-efficiency diff calculation for incremental text injection |
