@@ -132,19 +132,24 @@ namespace VeoFlow.Helper
                 AutomationElement targetElement = null;
                 if (targetPtr != IntPtr.Zero)
                 {
-                    try
+                    for (int retry = 0; retry < 10; retry++)
                     {
-                        var root = AutomationElement.FromHandle(targetPtr);
-                        if (root != null)
+                        try
                         {
-                            var cond = new OrCondition(
-                                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document),
-                                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)
-                            );
-                            targetElement = root.FindFirst(TreeScope.Descendants, cond) ?? root;
+                            var root = AutomationElement.FromHandle(targetPtr);
+                            if (root != null)
+                            {
+                                var cond = new OrCondition(
+                                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document),
+                                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)
+                                );
+                                targetElement = root.FindFirst(TreeScope.Descendants, cond);
+                                if (targetElement != null) break;
+                            }
                         }
+                        catch { }
+                        Thread.Sleep(100);
                     }
-                    catch { }
                 }
 
                 if (targetElement == null)
@@ -235,24 +240,36 @@ namespace VeoFlow.Helper
                     if (currentText == text)
                     {
                         // Payload consumed and unchanged: Safe to restore user's original data
-                        if (previousData != null)
+                        bool restored = false;
+                        for (int retry = 0; retry < 10; retry++)
                         {
                             try
                             {
-                                Clipboard.SetDataObject(previousData, true);
-                                localResult.ClipboardRestored = true;
+                                if (previousData != null)
+                                {
+                                    Clipboard.SetDataObject(previousData, true);
+                                    restored = true;
+                                    break;
+                                }
+                                else if (!string.IsNullOrEmpty(previousText))
+                                {
+                                    Clipboard.SetText(previousText);
+                                    restored = true;
+                                    break;
+                                }
+                                else
+                                {
+                                    Clipboard.Clear();
+                                    restored = true;
+                                    break;
+                                }
                             }
-                            catch { }
-                        }
-                        else
-                        {
-                            try
+                            catch
                             {
-                                Clipboard.Clear();
-                                localResult.ClipboardRestored = true;
+                                Thread.Sleep(50);
                             }
-                            catch { }
                         }
+                        localResult.ClipboardRestored = restored;
                     }
                     else
                     {

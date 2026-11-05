@@ -109,14 +109,31 @@ namespace VeoFlow.Verification
                 if (el != null)
                 {
                     el.SetFocus();
-                    var edit = el.FindFirst(TreeScope.Descendants, new OrCondition(
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document),
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)
-                    ));
-                    if (edit != null) edit.SetFocus();
+                    AutomationElement edit = null;
+                    for (int retry = 0; retry < 15; retry++)
+                    {
+                        edit = el.FindFirst(TreeScope.Descendants, new OrCondition(
+                            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document),
+                            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)
+                        ));
+                        if (edit != null) break;
+                        Thread.Sleep(100);
+                    }
+                    if (edit != null)
+                    {
+                        edit.SetFocus();
+                        object vpObj;
+                        if (edit.TryGetCurrentPattern(ValuePattern.Pattern, out vpObj))
+                        {
+                            ((ValuePattern)vpObj).SetValue(""); // Ensure clean canvas
+                        }
+                    }
                 }
             }
             catch { }
+
+            Thread.Sleep(300);
+            Clipboard.SetText(originalClipboard);
 
             Thread.Sleep(500);
             IntPtr fg = GetForegroundWindow();
