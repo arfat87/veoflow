@@ -3,6 +3,7 @@
  * Tracks and audits text insertion transactions with status lifecycles and cryptographic hashes.
  */
 import crypto from 'node:crypto';
+import defaultDb from '../../database/database.js';
 
 export const TRANSACTION_STATUSES = {
   PENDING: 'pending',
@@ -14,9 +15,10 @@ export const TRANSACTION_STATUSES = {
 };
 
 export class TransactionTracker {
-  constructor(maxHistory = 100) {
+  constructor(maxHistory = 100, databaseInstance = null) {
     this.transactions = new Map();
     this.maxHistory = maxHistory;
+    this.db = databaseInstance;
   }
 
   /**
@@ -60,6 +62,19 @@ export class TransactionTracker {
 
     this.transactions.set(id, transaction);
 
+    if (this.db && typeof this.db.addInsertionTransaction === 'function') {
+      try {
+        this.db.addInsertionTransaction({
+          transactionId: id,
+          targetHwnd,
+          targetProcess: appName,
+          strategy,
+          textHash,
+          status: TRANSACTION_STATUSES.PENDING
+        });
+      } catch {}
+    }
+
     // Evict oldest transactions if capacity exceeded
     if (this.transactions.size > this.maxHistory) {
       const oldestKey = this.transactions.keys().next().value;
@@ -100,6 +115,16 @@ export class TransactionTracker {
     if (typeof updates.clipboardRestored === 'boolean') tx.clipboardRestored = updates.clipboardRestored;
     if (updates.error) tx.error = updates.error;
 
+    if (this.db && typeof this.db.updateInsertionTransaction === 'function') {
+      try {
+        this.db.updateInsertionTransaction(id, {
+          status: tx.status,
+          errorMessage: tx.error,
+          completedAt: new Date().toISOString()
+        });
+      } catch {}
+    }
+
     return tx;
   }
 
@@ -112,6 +137,6 @@ export class TransactionTracker {
   }
 }
 
-export const defaultTransactionTracker = new TransactionTracker();
+export const defaultTransactionTracker = new TransactionTracker(100, defaultDb);
 export default defaultTransactionTracker;
 

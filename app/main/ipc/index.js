@@ -105,12 +105,19 @@ export function registerIpcHandlers({
 
       const latencyMs = Date.now() - startTime;
       const ctx = dictationState.currentContext;
+      const activeProvider = db.getSetting('stt_provider') || db.getSetting('ai_provider') || 'gemini';
+      const fmtProvider = db.getSetting('formatting_provider') || db.getSetting('ai_provider') || 'gemini';
+      const dictLang = db.getSetting('dictation_language') || 'auto';
+
       db.addHistory({
         appName: ctx?.application?.name || ctx?.appName,
         windowTitle: ctx?.window?.title ?? ctx?.windowTitle,
         url: ctx?.window?.url ?? ctx?.url,
         rawAsr,
         formattedText,
+        language: dictLang,
+        transcriptionProvider: activeProvider,
+        formattingProvider: fmtProvider,
         latencyMs,
         status: 'success'
       });
@@ -173,11 +180,23 @@ export function registerIpcHandlers({
   });
 
   // History handlers
-  ipcMain.handle('get-history', () => db.getHistory());
+  ipcMain.handle('get-history', (e, limit, filter) => db.getHistory(limit, filter));
+  ipcMain.handle('search-history', (e, payload) => db.searchHistory(payload?.query, payload?.options));
   ipcMain.handle('delete-history-item', (e, id) => db.deleteHistoryItem(Number(id)));
   ipcMain.handle('clear-history', () => {
     db.clearHistory();
     return true;
+  });
+  ipcMain.handle('export-history', (e, format) => db.exportHistory(format || 'json'));
+  ipcMain.handle('retry-history-item', async (e, id) => {
+    const item = db.getHistoryById(id);
+    if (item && item.formatted_text) {
+      await diffPaster.pasteFull(item.formatted_text, dictationState.currentContext, {
+        rawTranscript: item.raw_asr
+      });
+      return true;
+    }
+    return false;
   });
 
   // AI Connection Test
@@ -193,7 +212,7 @@ export function registerIpcHandlers({
   });
 
   // Dictionary handlers
-  ipcMain.handle('get-dictionary', () => db.getDictionary());
+  ipcMain.handle('get-dictionary', (e, onlyEnabled) => db.getDictionary(onlyEnabled));
   ipcMain.handle('add-dictionary-word', (e, payload) => {
     const parseResult = DictionaryWordSchema.safeParse(payload);
     if (!parseResult.success) {
@@ -201,12 +220,16 @@ export function registerIpcHandlers({
       return false;
     }
     const { trigger, rep } = parseResult.data;
-    return db.addDictionaryWord(trigger, rep);
+    return db.addDictionaryWord(trigger, rep, payload);
   });
+  ipcMain.handle('edit-dictionary-word', (e, payload) => db.editDictionaryWord(Number(payload?.id), payload?.updates));
   ipcMain.handle('delete-dictionary-word', (e, id) => db.deleteDictionaryWord(Number(id)));
+  ipcMain.handle('toggle-dictionary-word', (e, payload) => db.toggleDictionaryWord(Number(payload?.id), payload?.isEnabled));
+  ipcMain.handle('import-dictionary', (e, entries) => db.importDictionary(entries));
+  ipcMain.handle('export-dictionary', () => db.exportDictionary());
 
   // Snippet handlers
-  ipcMain.handle('get-snippets', () => db.getSnippets());
+  ipcMain.handle('get-snippets', (e, onlyEnabled) => db.getSnippets(onlyEnabled));
   ipcMain.handle('add-snippet', (e, payload) => {
     const parseResult = SnippetSchema.safeParse(payload);
     if (!parseResult.success) {
@@ -214,9 +237,20 @@ export function registerIpcHandlers({
       return false;
     }
     const { shortcut, text } = parseResult.data;
-    return db.addSnippet(shortcut, text);
+    return db.addSnippet(shortcut, text, payload?.isEnabled);
   });
+  ipcMain.handle('edit-snippet', (e, payload) => db.editSnippet(Number(payload?.id), payload?.updates));
   ipcMain.handle('delete-snippet', (e, id) => db.deleteSnippet(Number(id)));
+  ipcMain.handle('toggle-snippet', (e, payload) => db.toggleSnippet(Number(payload?.id), payload?.isEnabled));
+  ipcMain.handle('test-snippet', (e, sampleText) => db.testSnippetExpansion(sampleText));
+
+  // Provider Configs handlers
+  ipcMain.handle('get-provider-configs', () => db.getProviderConfigs());
+  ipcMain.handle('set-provider-config', (e, payload) => db.setProviderConfig(payload?.providerId, payload?.config));
+
+  // Backup & Recovery handlers
+  ipcMain.handle('backup-database', (e, targetPath) => db.backup(targetPath));
+  ipcMain.handle('restore-database', (e, backupPath) => db.restore(backupPath));
 
   // Application Rules handlers (Privacy & Permissions)
   ipcMain.handle('get-app-rules', () => db.getAppRules());

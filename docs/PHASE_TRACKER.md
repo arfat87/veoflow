@@ -18,8 +18,8 @@
 | **Phase 06** | Contextual AI Formatter & Instruction Mode | `COMPLETE` | Passed all Formatter, Mode, Directive & Validation Tests |
 | **Phase 07** | Smart Text Injection Engine & Verification | `COMPLETE` | Passed all Target, UIA, Clipboard & Live Tests |
 | **Phase 08** | Floating HUD & Desktop Interface | `COMPLETE` | Passed HUD, Visualizer, 7 Settings Screens & Tray Tests |
-| **Phase 09** | SQLite Database & Local Persistence | `READY FOR IMPLEMENTATION` | Phase 08 Gate |
-| **Phase 10** | Security Hardening & DPAPI Credentials | `BLOCKED` | Phase 09 Gate |
+| **Phase 09** | SQLite Database & Local Persistence | `COMPLETE` | Passed all 6 Schema Modules, Migrations, Drivers & Tests |
+| **Phase 10** | Security Hardening & DPAPI Credentials | `READY FOR IMPLEMENTATION` | Phase 09 Gate |
 | **Phase 11** | Quality Assurance, E2E & Benchmarking | `BLOCKED` | Phase 10 Gate |
 | **Phase 12** | Production Packaging, NSIS & Release | `BLOCKED` | Phase 11 Gate |
 
@@ -197,4 +197,51 @@ A production-quality desktop interface featuring a frameless, transparent, alway
   - Clean Vite build via `npm run build:renderer`.
   - Smoke tested via Electron bootstrap (`$env:VEOFLOW_TEST_EXIT = '1'; npm start`).
 - [x] Total automated test suite: 123/123 Vitest tests + 7/7 native C# tests (130/130 total) passing.
+
+---
+
+## 7. Phase 09: SQLite Database & Local Persistence (Completed)
+
+### Target Deliverable
+A complete, production-grade local persistence engine powered by official SQLite WebAssembly (`sql.js`) with atomic file persistence (`~/.veoflow/veoflow.sqlite`), versioned schema migrations, foreign keys and indexes, full history search/filter/export (JSON/CSV) and retry paste actions, prioritized and case-sensitive custom vocabulary with recursive replacement protection, voice snippets with usage metrics and test expansion, provider configurations, retention policy enforcement, and live database backup/restore.
+
+### Tasks Checklist
+- [x] SQLite Database Driver (`SqliteDriver` in [`app/database/sqlite-driver.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/database/sqlite-driver.js)):
+  - WebAssembly runtime (`sql.js`) requiring zero native C++ compilation tools.
+  - Synchronous query execution, prepared statements, and atomic disk persistence.
+  - Full transaction isolation (`BEGIN TRANSACTION` ... `COMMIT;`) with disk export guard.
+  - Windows-safe atomic writing with unique process/timestamp temp files and `EPERM` fallback.
+- [x] Versioned Migrations Framework ([`app/database/migrations.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/database/migrations.js)):
+  - Migration ledger table `schema_migrations` tracking applied versions.
+  - `001_initial_schema`: `settings`, `dictations`, `dictionary`, `snippets`, `provider_configs`, `insertion_transactions`, `app_rules`.
+  - `002_user_features_and_indexes`: Added `priority` and `case_sensitive` columns to dictionary, `usage_count` and `last_used_at` to snippets, and performance indexes.
+- [x] Complete Database Manager ([`app/database/database.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/database/database.js)):
+  - Full CRUD for Settings, Dictation History, Dictionary, Snippets, Provider Configs, Insertion Transactions, and App Rules.
+  - Automatic migration from legacy JSON file (`~/.veoflow/veoflow_store.json`) preserving existing user data.
+  - Retention policy enforcement (`applyRetentionPolicy(days)` for 7, 30, 90, 365 days).
+  - Online database binary backup (`backup(targetPath)`) and hot restore (`restore(backupPath)`).
+- [x] Advanced Custom Dictionary ([`app/core/formatting/dictionary-service.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/core/formatting/dictionary-service.js)):
+  - Priority ordering (`priority ASC, LENGTH(trigger_word) DESC`).
+  - Case sensitivity toggle (`case_sensitive = 1|0`).
+  - Active/disabled toggle (`enabled = 1|0`).
+  - Recursive replacement protection using non-colliding token placeholders (`\uE000__VEO_REP_${i}__\uE001`).
+  - Safe replacement of special regex patterns ($1, $& tokens).
+- [x] Voice Snippets Engine:
+  - Trigger phrase matching and multi-line template expansion.
+  - Usage tracking with `usage_count` increments and `last_used_at` timestamps.
+  - Interactive test expansion endpoint for live preview.
+- [x] Dictation History Features:
+  - Search across raw transcript, formatted text, and target app.
+  - Filter by insertion status (`verified`, `unverified`, `failed`, `cancelled`) or target application.
+  - Structured data export to JSON and CSV formats.
+  - In-place retry paste into active window (`retryHistoryItem(id)`).
+  - Single-item delete and full history purge.
+- [x] UI & IPC Integration ([`app/main/ipc/index.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/main/ipc/index.js), [`app/preload/index.cjs`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/preload/index.cjs), [`app/renderer/settings/settings.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/app/renderer/settings/settings.js)):
+  - 14 new IPC handlers registered for history, dictionary, snippets, and database maintenance.
+  - Settings UI controls for history export, retry paste, dictionary priority, snippet playground, recording mode, language selector, retention policy, and database backup/restore.
+- [x] Automated Testing Harness:
+  - 17/17 tests passing in [`tests/unit/sqlite_persistence.test.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/tests/unit/sqlite_persistence.test.js).
+  - 5/5 tests passing in [`tests/unit/database.test.js`](file:///c:/MY_ALL_ITEM/rea/veoflow/tests/unit/database.test.js).
+  - Total automated test suite: 140/140 Vitest tests + 7/7 native C# tests (147/147 total) passing.
+
 

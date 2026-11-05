@@ -1,6 +1,6 @@
 # VeoFlow: Complete File Inventory & Architecture Mapping
 
-**Document Version:** 1.8.0  
+**Document Version:** 1.9.0  
 **Inventory Date:** November 5, 2026  
 **Engineering Governance:** Adheres to Section 3 of `VEOFLOW_ARCHITECTURE.md`.
 
@@ -83,7 +83,9 @@ veoflow/
 │   │   └── pipeline/                 # Reserved for dictation state machine orchestration
 │   │
 │   ├── database/
-│   │   └── database.js               # Isolated DatabaseManager supporting test sandboxing
+│   │   ├── database.js               # DatabaseManager providing SQLite persistence API
+│   │   ├── migrations.js             # Versioned SQLite migrations (001_initial, 002_user_features)
+│   │   └── sqlite-driver.js          # SQLite WebAssembly (sql.js) driver with atomic disk sync
 │   │
 │   ├── security/                     # Reserved for Phase 10 DPAPI credential protection
 │   │
@@ -121,6 +123,7 @@ veoflow/
 │   │   ├── constants.test.js         # Vitest specs for shared constants
 │   │   ├── validation.test.js        # Vitest specs for Zod validation schemas
 │   │   ├── database.test.js          # Vitest specs for isolated database CRUD
+│   │   ├── sqlite_persistence.test.js # Vitest specs for SQLite driver, migrations, history, dictionary & snippets
 │   │   ├── wav_encoder.test.js       # Vitest specs for WAV header encoding and parsing
 │   │   ├── audio_utils.test.js       # Vitest specs for RMS, dBFS, silence, and duration limits
 │   │   ├── audio_manager.test.js     # Vitest specs for recording persistence & worker threads
@@ -162,3 +165,4 @@ veoflow/
 | `vitest`           | `^5.1.0`  | Dev  | Fast unit and integration test runner                           |
 | `zod`              | `^4.6.7`  | Dev  | Strict runtime validation schemas for IPC & settings            |
 | `diff-match-patch` | `^1.0.5`  | Prod | High-efficiency diff calculation for incremental text injection |
+| `sql.js`           | `^1.15.2` | Prod | SQLite compiled to WebAssembly with zero native build prerequisites |

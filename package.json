@@ -24,7 +24,8 @@
   "author": "VeoFlow",
   "license": "MIT",
   "dependencies": {
-    "diff-match-patch": "^1.0.5"
+    "diff-match-patch": "^1.0.5",
+    "sql.js": "^1.15.2"
   },
   "devDependencies": {
     "electron": "^34.2.0",

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VeoFlow Settings & Dashboard</title>
+  <title>VeoFlow Settings &amp; Dashboard</title>
   <link rel="stylesheet" href="settings.css">
 </head>
 <body>
@@ -20,7 +20,7 @@
         </div>
         <div class="brand-info">
           <h2>VeoFlow</h2>
-          <span class="version">v1.0.0 • Desktop</span>
+          <span class="version">v1.0.0 • SQLite</span>
         </div>
       </div>
 
@@ -59,7 +59,7 @@
             <rect x="2" y="4" width="20" height="16" rx="2"/>
             <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h8M6 16h.01M10 16h.01M14 16h.01M18 16h.01"/>
           </svg>
-          General & Audio
+          General &amp; Audio
         </button>
 
         <!-- 5. Custom Dictionary -->
@@ -85,7 +85,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
-          Privacy & Rules
+          Privacy &amp; Rules
         </button>
       </nav>
     </aside>
@@ -100,7 +100,7 @@
         <div class="pane-header flex-between">
           <div>
             <h1>Dashboard</h1>
-            <p>System overview, dictation statistics, and quick control actions.</p>
+            <p>SQLite persistence, real-time statistics, and quick control actions.</p>
           </div>
           <div class="header-actions">
             <button class="btn-primary" id="dashStartDictBtn">🎙️ Start Voice Dictation</button>
@@ -113,7 +113,7 @@
           <div class="stat-card">
             <span class="stat-label">Total Dictations</span>
             <span class="stat-value" id="statTotalDictations">0</span>
-            <span class="stat-sub">Lifetime sessions</span>
+            <span class="stat-sub">SQLite persisted</span>
           </div>
 
           <div class="stat-card">
@@ -141,17 +141,17 @@
             <h3>System Status</h3>
             <div class="status-row">
               <span class="status-indicator active"></span>
+              <span class="status-name">Database Source:</span>
+              <span class="status-detail" id="dbStatusDetail">SQLite (WAL / Foreign Keys)</span>
+            </div>
+            <div class="status-row">
+              <span class="status-indicator active"></span>
               <span class="status-name">Windows Native Helper:</span>
-              <span class="status-detail" id="helperStatusDetail">Active (PID: 64-bit)</span>
+              <span class="status-detail" id="helperStatusDetail">Active (64-bit C#)</span>
             </div>
             <div class="status-row">
               <span class="status-indicator active"></span>
-              <span class="status-name">Microphone Capture:</span>
-              <span class="status-detail" id="audioStatusDetail">Ready (Web Audio 16kHz)</span>
-            </div>
-            <div class="status-row">
-              <span class="status-indicator active"></span>
-              <span class="status-name">Global Hotkey:</span>
+              <span class="status-name">Global Shortcut:</span>
               <span class="status-detail" id="hotkeyStatusDetail">Ctrl+Alt+Space</span>
             </div>
           </div>
@@ -161,7 +161,7 @@
             <div class="quick-btn-group">
               <button class="btn-secondary" id="dashQuickTestAi">⚡ Test Active AI Connection</button>
               <button class="btn-secondary" id="dashQuickViewHistory">📋 View Full History</button>
-              <button class="btn-secondary" id="dashQuickClearHistory">🗑️ Clear History Cache</button>
+              <button class="btn-secondary" id="dashQuickBackup">💾 Backup SQLite Database</button>
             </div>
           </div>
         </div>
@@ -170,7 +170,7 @@
         <div class="card" style="margin-top: 20px;">
           <div class="flex-between" style="margin-bottom: 12px;">
             <h3>Recent Dictation Activity</h3>
-            <span class="card-desc">Showing latest 5 entries</span>
+            <span class="card-desc">Showing latest 5 sessions</span>
           </div>
           <div class="table-container">
             <table class="data-table">
@@ -199,8 +199,8 @@
       <section id="ai-settings" class="tab-pane" role="tabpanel" aria-labelledby="tab-ai-settings">
         <div class="pane-header flex-between">
           <div>
-            <h1>AI Inference & Models</h1>
-            <p>Configure speech recognition providers, models, API keys, and fallback policies.</p>
+            <h1>AI Inference &amp; Models</h1>
+            <p>Configure speech recognition providers, model configurations, API keys, and fallback policies.</p>
           </div>
         </div>
 
@@ -290,18 +290,29 @@
         <div class="pane-header flex-between">
           <div>
             <h1>Dictation History</h1>
-            <p>Inspect, filter, re-copy, or delete past transcriptions and injection transactions.</p>
+            <p>Inspect, filter, re-copy, retry, export, or delete SQLite-persisted dictation sessions.</p>
           </div>
-          <button class="btn-danger" id="clearHistoryBtn">Clear All History</button>
+          <div class="header-actions">
+            <button class="btn-secondary" id="exportHistoryJsonBtn">Export JSON</button>
+            <button class="btn-secondary" id="exportHistoryCsvBtn">Export CSV</button>
+            <button class="btn-danger" id="clearHistoryBtn">Clear All</button>
+          </div>
         </div>
 
         <div class="card" style="padding: 12px 16px; margin-bottom: 16px;">
-          <div class="search-bar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input type="text" id="historySearchInput" placeholder="Search history by text, application name, or date..." class="search-input">
+          <div style="display: flex; gap: 12px;">
+            <div class="search-bar" style="flex: 1;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="text" id="historySearchInput" placeholder="Search history by text, application name, or date..." class="search-input">
+            </div>
+            <select id="historyStatusFilter" class="select-input" style="max-width: 140px;">
+              <option value="">All Statuses</option>
+              <option value="success">Success</option>
+              <option value="error">Error</option>
+            </select>
           </div>
         </div>
 
@@ -309,13 +320,13 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th style="width: 120px;">Time</th>
-                <th style="width: 130px;">Application</th>
-                <th>Formatted Text</th>
-                <th style="width: 180px;">Raw Speech</th>
-                <th style="width: 80px;">Latency</th>
-                <th style="width: 80px;">Status</th>
-                <th style="width: 130px;">Actions</th>
+                <th style="width: 110px;">Time</th>
+                <th style="width: 120px;">App</th>
+                <th>Formatted Output</th>
+                <th style="width: 150px;">Raw Speech</th>
+                <th style="width: 70px;">Latency</th>
+                <th style="width: 75px;">Status</th>
+                <th style="width: 170px;">Actions</th>
               </tr>
             </thead>
             <tbody id="historyBody">
@@ -333,11 +344,12 @@
       <section id="general" class="tab-pane" role="tabpanel" aria-labelledby="tab-general">
         <div class="pane-header">
           <h1>General Preferences &amp; Audio Input</h1>
-          <p>Configure hardware audio devices, startup behavior, insertion, and global hotkeys.</p>
+          <p>Configure hardware audio devices, recording modes, language, retention, and database backups.</p>
         </div>
 
         <div class="card">
-          <h3>Audio Input Hardware</h3>
+          <h3>Audio Input Hardware &amp; Mode</h3>
+          
           <div class="form-group">
             <label>Microphone Device</label>
             <div class="input-with-action">
@@ -347,6 +359,29 @@
               <button class="btn-secondary" id="refreshAudioDevicesBtn">Refresh Devices</button>
             </div>
             <span class="input-help">Select the dedicated microphone for voice recognition.</span>
+          </div>
+
+          <div class="form-group">
+            <label>Shortcut Recording Mode</label>
+            <select id="recordingModeSelect" class="select-input">
+              <option value="push_to_talk">Push-to-Talk (Hold hotkey down while speaking, release to insert)</option>
+              <option value="toggle">Tap to Toggle (Tap once to start, tap again to finish and insert)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Speech Recognition Language</label>
+            <select id="dictationLanguageSelect" class="select-input">
+              <option value="auto">Automatic Language Detection (Multilingual)</option>
+              <option value="en">English (en)</option>
+              <option value="hi">Hindi (hi)</option>
+              <option value="bn">Bengali (bn)</option>
+              <option value="es">Spanish (es)</option>
+              <option value="fr">French (fr)</option>
+              <option value="de">German (de)</option>
+              <option value="ja">Japanese (ja)</option>
+              <option value="zh">Chinese (zh)</option>
+            </select>
           </div>
         </div>
 
@@ -359,7 +394,7 @@
               <input type="text" id="hotkeyInput" value="Ctrl+Alt+Space" placeholder="e.g. Ctrl+Alt+Space">
               <button class="btn-primary" id="saveHotkeyBtn">Update Shortcut</button>
             </div>
-            <span class="input-help">Hold down for Push-to-Talk or tap once to toggle recording.</span>
+            <span class="input-help">Registered with Windows low-level keyboard hook.</span>
           </div>
 
           <div class="form-group">
@@ -370,6 +405,18 @@
               <option value="casual">Casual &amp; Conversational</option>
               <option value="verbatim">Verbatim (Exact words only, skip tone rewriting)</option>
             </select>
+          </div>
+
+          <div class="form-group">
+            <label>History Retention Policy</label>
+            <select id="historyRetentionSelect" class="select-input">
+              <option value="7">7 Days</option>
+              <option value="30" selected>30 Days (Recommended)</option>
+              <option value="90">90 Days</option>
+              <option value="365">1 Year</option>
+              <option value="0">Unlimited (Keep all dictations)</option>
+            </select>
+            <span class="input-help">Dictations older than this cutoff will be purged automatically on startup.</span>
           </div>
 
           <div class="form-group toggle-group">
@@ -388,21 +435,47 @@
             <input type="checkbox" id="startupToggle">
           </div>
         </div>
+
+        <!-- Database Backup & Restore Card -->
+        <div class="card">
+          <h3>SQLite Database Backup &amp; Recovery</h3>
+          <p class="card-desc">Create standalone backups of your VeoFlow SQLite database or restore from a previous file.</p>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button class="btn-secondary" id="backupDbBtn">💾 Export Database Backup</button>
+            <label class="btn-secondary" style="margin: 0; cursor: pointer;">
+              📂 Restore Database from File
+              <input type="file" id="restoreDbFileInput" accept=".sqlite,.db" style="display: none;">
+            </label>
+          </div>
+        </div>
       </section>
 
       <!-- ==================================================================
            SECTION 5: CUSTOM DICTIONARY
            ================================================================== -->
       <section id="dictionary" class="tab-pane" role="tabpanel" aria-labelledby="tab-dictionary">
-        <div class="pane-header">
-          <h1>Custom Vocabulary Dictionary</h1>
-          <p>Add technical terms, code identifiers, jargon, or acronyms for automatic whole-word replacement.</p>
+        <div class="pane-header flex-between">
+          <div>
+            <h1>Custom Vocabulary Dictionary</h1>
+            <p>Word substitutions with priority ordering, whole-word matching, case sensitivity, and recursive loop protection.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" id="exportDictBtn">Export JSON</button>
+            <label class="btn-secondary" style="margin: 0; cursor: pointer;">
+              Import JSON
+              <input type="file" id="importDictFileInput" accept=".json" style="display: none;">
+            </label>
+          </div>
         </div>
 
         <div class="card add-form">
-          <div class="form-row">
-            <input type="text" id="dictWordInput" placeholder="When I say (e.g. kubernetes)">
-            <input type="text" id="dictRepInput" placeholder="Replace with (e.g. K8s)">
+          <div class="form-row" style="align-items: center; flex-wrap: wrap;">
+            <input type="text" id="dictWordInput" placeholder="Spoken word (e.g. kubernetes)" style="flex: 2; min-width: 160px;">
+            <input type="text" id="dictRepInput" placeholder="Replace with (e.g. K8s)" style="flex: 2; min-width: 160px;">
+            <input type="number" id="dictPriorityInput" placeholder="Priority" value="100" style="max-width: 90px;" title="Priority: lower numbers replace first">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); cursor: pointer;">
+              <input type="checkbox" id="dictCaseSensCheck"> Case Sensitive
+            </label>
             <button class="btn-primary" id="addDictBtn">Add Substitution</button>
           </div>
         </div>
@@ -413,7 +486,10 @@
               <tr>
                 <th>Spoken Trigger Word</th>
                 <th>Target Replacement</th>
-                <th style="width: 100px;">Action</th>
+                <th style="width: 70px;">Priority</th>
+                <th style="width: 100px;">Case Sensitive</th>
+                <th style="width: 80px;">Enabled</th>
+                <th style="width: 110px;">Actions</th>
               </tr>
             </thead>
             <tbody id="dictionaryBody"></tbody>
@@ -438,13 +514,26 @@
           </div>
         </div>
 
+        <!-- Snippet Testing Playground -->
+        <div class="card" style="padding: 14px 18px; margin-bottom: 20px;">
+          <h3 style="font-size: 13px; margin-bottom: 8px;">Interactive Snippet Test Playground</h3>
+          <div class="form-row" style="align-items: center;">
+            <input type="text" id="snippetTestInput" placeholder="Type a spoken phrase to test expansion..." style="flex: 1;">
+            <button class="btn-secondary" id="snippetTestBtn">Test Expansion</button>
+          </div>
+          <div id="snippetTestResult" style="margin-top: 8px; font-size: 12px; color: #00f2fe; min-height: 18px;"></div>
+        </div>
+
         <div class="table-container">
           <table class="data-table">
             <thead>
               <tr>
                 <th>Trigger Phrase</th>
                 <th>Expanded Text</th>
-                <th style="width: 100px;">Action</th>
+                <th style="width: 70px;">Uses</th>
+                <th style="width: 110px;">Last Used</th>
+                <th style="width: 80px;">Enabled</th>
+                <th style="width: 110px;">Actions</th>
               </tr>
             </thead>
             <tbody id="snippetsBody"></tbody>
