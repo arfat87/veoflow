@@ -1,11 +1,36 @@
-import { BrowserWindow, screen } from 'electron';
+import { BrowserWindow, screen, app } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import defaultDb from '../database/database.js';
 import logger from '../shared/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+export function resolveViewHtml(relativeViewPath) {
+  // 1. Packaged or compiled Vite production build
+  const distCandidate = path.resolve(__dirname, '../../dist/renderer', relativeViewPath);
+  if (fs.existsSync(distCandidate)) {
+    return distCandidate;
+  }
+  // 2. Unpackaged development source
+  const devCandidate = path.resolve(__dirname, '../renderer', relativeViewPath);
+  if (fs.existsSync(devCandidate)) {
+    return devCandidate;
+  }
+  return devCandidate;
+}
+
+export function resolveApplicationIcon() {
+  const icoPath = path.resolve(__dirname, '../../build/icon.ico');
+  if (fs.existsSync(icoPath)) return icoPath;
+  const pngPath = path.resolve(__dirname, '../../build/icon.png');
+  if (fs.existsSync(pngPath)) return pngPath;
+  const assetPng = path.resolve(__dirname, '../../assets/icon.png');
+  if (fs.existsSync(assetPng)) return assetPng;
+  return null;
+}
 
 export class WindowManager {
   constructor(databaseInstance = null) {
@@ -87,7 +112,7 @@ export class WindowManager {
     });
 
     this.overlayWindow.setAlwaysOnTop(true, 'status');
-    const overlayHtmlPath = path.resolve(__dirname, '../renderer/hud/overlay.html');
+    const overlayHtmlPath = resolveViewHtml('hud/overlay.html');
     this.overlayWindow.loadFile(overlayHtmlPath);
 
     this.overlayWindow.once('ready-to-show', () => {
@@ -125,12 +150,14 @@ export class WindowManager {
       return this.settingsWindow;
     }
 
+    const appIcon = resolveApplicationIcon();
     this.settingsWindow = new BrowserWindow({
       width: 960,
       height: 720,
       minWidth: 780,
       minHeight: 560,
       title: 'VeoFlow Settings & Dashboard',
+      icon: appIcon || undefined,
       autoHideMenuBar: true,
       backgroundColor: '#0b0f17',
       webPreferences: {
@@ -142,7 +169,7 @@ export class WindowManager {
       }
     });
 
-    const settingsHtmlPath = path.resolve(__dirname, '../renderer/settings/settings.html');
+    const settingsHtmlPath = resolveViewHtml('settings/settings.html');
     this.settingsWindow.loadFile(settingsHtmlPath);
 
     this.settingsWindow.once('ready-to-show', () => {

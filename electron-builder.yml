@@ -1,0 +1,54 @@
+appId: com.veoflow.app
+productName: VeoFlow
+copyright: "Copyright © 2026 VeoFlow Contributors"
+
+directories:
+  output: dist_release
+  buildResources: build
+
+files:
+  - package.json
+  - app/**/*
+  - dist/**/*
+  - assets/**/*
+  - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
+  - "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}"
+
+extraResources:
+  - from: helper/bin/VeoFlowHelper.exe
+    to: bin/VeoFlowHelper.exe
+
+asar: true
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: "${productName}-Setup-${version}-${arch}.${ext}"
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: VeoFlow
+  uninstallDisplayName: "VeoFlow Voice Assistant"
+  deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+
+portable:
+  artifactName: "${productName}-Portable-${version}-${arch}.${ext}"
+  unpackDirName: VeoFlow
+
+publish:
+  provider: github
+  owner: veoflow
+  repo: veoflow
+

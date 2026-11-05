@@ -3,9 +3,10 @@
  * Registers securely validated IPC handlers connecting the renderer with main services.
  * Strictly verifies sender frames, restricts payloads, and guarantees zero plaintext secret exposure.
  */
-import { ipcMain } from 'electron';
+import { ipcMain, app } from 'electron';
 import logger from '../../shared/logger.js';
 import defaultAudioManager from '../../core/audio/audio-manager.js';
+import { defaultUpdateManager } from '../../core/update-manager.js';
 import {
   AudioPayloadSchema,
   SettingPayloadSchema,
@@ -32,11 +33,14 @@ export function validateIpcSender(event, channel = 'IPC') {
     throw new Error('Unauthorized IPC sender: forbidden protocol');
   }
 
+  const normUrl = url.toLowerCase().replace(/\\/g, '/');
   const isAuthorized =
-    url.includes('/renderer/hud/overlay.html') ||
-    url.includes('/renderer/settings/settings.html') ||
-    url.includes('/dist/renderer/hud/overlay.html') ||
-    url.includes('/dist/renderer/settings/settings.html');
+    normUrl.endsWith('/hud/overlay.html') ||
+    normUrl.endsWith('/settings/settings.html') ||
+    normUrl.includes('/renderer/hud/overlay.html') ||
+    normUrl.includes('/renderer/settings/settings.html') ||
+    normUrl.includes('/dist/renderer/hud/overlay.html') ||
+    normUrl.includes('/dist/renderer/settings/settings.html');
 
   if (!isAuthorized) {
     logger.warn(`[Security] Blocked IPC invocation on '${channel}': Unauthorized page '${url}'`);
@@ -53,7 +57,8 @@ export function registerIpcHandlers({
   helperClient,
   aiService,
   diffPaster,
-  dictationState
+  dictationState,
+  lifecycleManager = null
 }) {
   const db = database;
   const helper = helperClient;
@@ -224,6 +229,9 @@ export function registerIpcHandlers({
       hotkeyManager.registerShortcuts();
       hotkeyManager.syncWithHelper();
     }
+    if (key === 'launch_at_startup' && lifecycleManager) {
+      lifecycleManager.syncLaunchOnStartup(value === 'true' || value === true);
+    }
     return true;
   });
 
@@ -342,4 +350,8 @@ export function registerIpcHandlers({
       overlay.hide();
     }
   });
+
+  // 11. Application Version & Secure Update Handlers
+  secureHandle('get-app-version', () => (app ? app.getVersion() : '1.0.0'));
+  secureHandle('check-for-updates', async () => defaultUpdateManager.checkForUpdates());
 }

@@ -68,6 +68,10 @@ contextBridge.exposeInMainWorld('veoflow', {
   // Window management
   openSettings: () => ipcRenderer.invoke('open-settings'),
   openHud: () => ipcRenderer.invoke('open-hud'),
-  closeOverlay: () => ipcRenderer.invoke('close-overlay')
+  closeOverlay: () => ipcRenderer.invoke('close-overlay'),
+
+  // Version & Updates
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates')
 });
 

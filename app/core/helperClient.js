@@ -9,18 +9,39 @@ import logger from '../shared/logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+export function resolveHelperExecutablePath() {
+  // 1. Packaged Electron extraResources paths
+  if (process.resourcesPath) {
+    const candidate1 = path.join(process.resourcesPath, 'bin', 'VeoFlowHelper.exe');
+    if (fs.existsSync(candidate1)) return candidate1;
+    const candidate2 = path.join(process.resourcesPath, 'VeoFlowHelper.exe');
+    if (fs.existsSync(candidate2)) return candidate2;
+  }
+
+  // 2. Development path relative to this file
+  const devPath = path.resolve(__dirname, '../../helper/bin/VeoFlowHelper.exe');
+  if (fs.existsSync(devPath)) return devPath;
+
+  // 3. Fallback to process.cwd()
+  const cwdPath = path.resolve(process.cwd(), 'helper/bin/VeoFlowHelper.exe');
+  if (fs.existsSync(cwdPath)) return cwdPath;
+
+  return devPath;
+}
+
 export class HelperClient extends EventEmitter {
-  constructor() {
+  constructor(customHelperPath = null) {
     super();
     this.process = null;
     this.pendingRequests = new Map();
-    this.helperPath = path.resolve(__dirname, '../../helper/bin/VeoFlowHelper.exe');
+    this.helperPath = customHelperPath || resolveHelperExecutablePath();
     this.isReady = false;
     this.isStopped = false;
   }
 
   start() {
     this.isStopped = false;
+    this.helperPath = this.helperPath || resolveHelperExecutablePath();
     if (!fs.existsSync(this.helperPath)) {
       const err = new Error(`Helper executable not found at ${this.helperPath}`);
       logger.error('Helper binary missing:', err.message);

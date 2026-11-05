@@ -2,7 +2,8 @@
  * VeoFlow Smart Injection Manager (ESM)
  * Coordinates target revalidation, insertion strategy execution, verification, and recovery.
  */
-import { clipboard } from 'electron';
+import * as electron from 'electron';
+const clipboard = electron.clipboard || (electron.default && typeof electron.default === 'object' ? electron.default.clipboard : null);
 import helperClient from '../helperClient.js';
 import { TargetManager } from './target-manager.js';
 import { TransactionTracker, TRANSACTION_STATUSES, defaultTransactionTracker } from './transaction-tracker.js';

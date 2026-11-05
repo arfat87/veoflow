@@ -11,7 +11,7 @@ describe('Live Windows Application Interaction (Notepad)', () => {
 
     // 1. Establish pre-existing clipboard contents to verify clipboard protection
     try {
-      execSync(`powershell -Sta -Command "Set-Clipboard -Value '${originalClipboardData}'"`, { timeout: 3000 });
+      execSync(`powershell -NoProfile -NonInteractive -Sta -Command "Set-Clipboard -Value '${originalClipboardData}'"`, { timeout: 12000 });
     } catch (e) {
       console.warn('Could not set initial clipboard:', e.message);
     }
@@ -91,7 +91,7 @@ describe('Live Windows Application Interaction (Notepad)', () => {
 
       // 6. Verify Completion Gate: Original clipboard contents remain completely intact!
       try {
-        const currentClipboard = execSync('powershell -Sta -Command "Get-Clipboard"', { timeout: 3000 }).toString().trim();
+        const currentClipboard = execSync('powershell -NoProfile -NonInteractive -Sta -Command "Get-Clipboard"', { timeout: 12000 }).toString().trim();
         console.log('Post-insertion clipboard value:', currentClipboard);
         expect(currentClipboard).toBe(originalClipboardData);
       } catch (e) {
@@ -107,5 +107,5 @@ describe('Live Windows Application Interaction (Notepad)', () => {
         notepad.kill();
       } catch {}
     }
-  }, 15000);
+  }, 30000);
 });

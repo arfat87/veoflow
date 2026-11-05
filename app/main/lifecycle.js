@@ -60,5 +60,26 @@ export class LifecycleManager {
 
     logger.info('Strict security policies and Content-Security-Policy configured');
   }
+
+  /**
+   * Synchronizes Windows login startup registration with user preference.
+   * @param {boolean} enabled
+   */
+  syncLaunchOnStartup(enabled) {
+    try {
+      if (app && app.isPackaged) {
+        app.setLoginItemSettings({
+          openAtLogin: Boolean(enabled),
+          path: process.execPath,
+          args: ['--hidden']
+        });
+        logger.info(`Startup login item updated: openAtLogin=${Boolean(enabled)}`);
+      } else {
+        logger.info(`[DevMode] Startup login item simulated: openAtLogin=${Boolean(enabled)}`);
+      }
+    } catch (err) {
+      logger.warn('Failed to update login item settings:', err.message);
+    }
+  }
 }
 

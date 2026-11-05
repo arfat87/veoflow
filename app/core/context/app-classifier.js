@@ -156,7 +156,7 @@ export class AppClassifier {
 
   isDocument(exe, title, url) {
     const docApps = [
-      'winword', 'wordpad', 'notion', 'obsidian', 'onenote',
+      'winword', 'wordpad', 'notepad', 'notion', 'obsidian', 'onenote',
       'acrobat', 'acrord32', 'typora', 'logseq', 'libreoffice', 'soffice.bin'
     ];
     if (docApps.includes(exe)) return true;

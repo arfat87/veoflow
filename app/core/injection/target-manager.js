@@ -12,11 +12,11 @@ export class TargetManager {
    */
   static captureTarget(rawContext = {}) {
     const raw = rawContext || {};
-    const hwnd = (raw.hwnd || '0x0').trim();
-    const pid = Number(raw.processId) || 0;
-    const appName = (raw.appName || 'Unknown').trim();
-    const windowTitle = (raw.windowTitle || '').trim();
-    const controlType = (raw.textbox?.controlType || '').trim();
+    const hwnd = (raw.hwnd || raw.targetHwnd || '0x0').trim();
+    const pid = Number(raw.processId || raw.application?.processId) || 0;
+    const appName = (raw.appName || raw.application?.name || 'Unknown').trim();
+    const windowTitle = (raw.windowTitle || raw.window?.title || '').trim();
+    const controlType = (raw.textbox?.controlType || raw.input?.controlType || '').trim();
 
     return {
       hwnd,

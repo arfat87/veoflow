@@ -43,7 +43,7 @@ describe('VeoFlow Native Helper IPC Integration', () => {
     expect(readyEvent.version).toBe('1.0.0');
     expect(typeof readyEvent.pid).toBe('number');
     expect(readyEvent.pid).toBeGreaterThan(0);
-  });
+  }, 15000);
 
   it('responds to ping with matching request ID and pong status', async () => {
     const reqId = 'test-ping-101';

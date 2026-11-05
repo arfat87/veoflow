@@ -1,10 +1,21 @@
 import { Tray, Menu, app } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import logger from '../shared/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+function getTrayIconPath() {
+  const icoCandidate = path.resolve(__dirname, '../../build/icon.ico');
+  if (fs.existsSync(icoCandidate)) return icoCandidate;
+  const pngCandidate = path.resolve(__dirname, '../../build/icon.png');
+  if (fs.existsSync(pngCandidate)) return pngCandidate;
+  const assetsCandidate = path.resolve(__dirname, '../../assets/icon.png');
+  if (fs.existsSync(assetsCandidate)) return assetsCandidate;
+  return assetsCandidate;
+}
 
 export class TrayManager {
   constructor(handlers = {}) {
@@ -15,7 +26,7 @@ export class TrayManager {
   }
 
   createTray() {
-    const iconPath = path.resolve(__dirname, '../../assets/icon.png');
+    const iconPath = getTrayIconPath();
     this.tray = new Tray(iconPath);
 
     const contextMenu = Menu.buildFromTemplate([

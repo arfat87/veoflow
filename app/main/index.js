@@ -127,7 +127,8 @@ registerIpcHandlers({
   helperClient: helper,
   aiService: ai,
   diffPaster,
-  dictationState
+  dictationState,
+  lifecycleManager
 });
 
 // Application Lifecycle
@@ -135,6 +136,7 @@ app.whenReady().then(async () => {
   logger.info('Electron ready event fired');
 
   lifecycleManager.configureSecurityPolicies();
+  lifecycleManager.syncLaunchOnStartup(db.getSetting('launch_at_startup') === 'true');
   windowManager.createOverlayWindow();
   trayManager.createTray();
   hotkeyManager.registerShortcuts();
