@@ -1,6 +1,6 @@
 # VeoFlow: Master Implementation Phase Tracker
 
-**Document Version:** 1.5.0  
+**Document Version:** 1.6.0  
 **Status Date:** November 5, 2026  
 **Engineering Governance:** All work must proceed sequentially through authorized phases. No phase is marked `COMPLETE` until its automated tests pass and all acceptance criteria are met.
 
@@ -15,8 +15,8 @@
 | **Phase 03** | Audio Recording Engine | `COMPLETE` | Passed all 16 Tasks & Fixture Tests |
 | **Phase 04** | AI Speech Recognition Providers | `COMPLETE` | Passed all Provider Adapters & Tests |
 | **Phase 05** | Application Context Detection Engine | `COMPLETE` | Passed all Classification, Privacy & Security Tests |
-| **Phase 06** | Contextual AI Formatter & Instruction Mode | `READY FOR IMPLEMENTATION` | Phase 05 Gate |
-| **Phase 07** | Smart Text Injection Engine & Verification | `BLOCKED` | Phase 06 Gate |
+| **Phase 06** | Contextual AI Formatter & Instruction Mode | `COMPLETE` | Passed all Formatter, Mode, Directive & Validation Tests |
+| **Phase 07** | Smart Text Injection Engine & Verification | `READY FOR IMPLEMENTATION` | Phase 06 Gate |
 | **Phase 08** | Floating HUD & Desktop Interface | `BLOCKED` | Phase 07 Gate |
 | **Phase 09** | SQLite Database & Local Persistence | `BLOCKED` | Phase 08 Gate |
 | **Phase 10** | Security Hardening & DPAPI Credentials | `BLOCKED` | Phase 09 Gate |
@@ -83,3 +83,42 @@ A robust, privacy-first application context engine that extracts active target a
 - [x] Embed context inside `<untrusted_app_context>` with CRITICAL SECURITY DIRECTIVES in `AIService.buildFormattingSystemPrompt`.
 - [x] Comprehensive automated unit test suite (`tests/unit/context_engine.test.js`) with 18 tests passing.
 - [x] Total automated test suite: 75/75 Vitest tests + 5/5 native C# tests (80/80 total) passing.
+
+---
+
+## 4. Phase 06: Contextual AI Formatter & Instruction Mode (Completed)
+
+### Target Deliverable
+A provider-independent AI formatting engine that shapes raw speech into application-specific text, executes voice directives (translation, grammar correction, bullet points, rephrasing), preserves technical terminology without inventing facts, enforces terminal safety (never generating executable commands from literal speech), validates model outputs, expands voice snippets, and performs injection-safe custom dictionary replacements.
+
+### Tasks Checklist
+- [x] Create provider-independent formatting interface (`BaseFormatter` in `app/core/formatting/base-formatter.js`).
+- [x] Implement Gemini formatter adapter (`GeminiFormatter` in `app/core/formatting/gemini-formatter.js` with zero-thought budget).
+- [x] Implement Groq LLM formatter adapter (`GroqFormatter` in `app/core/formatting/groq-formatter.js` with multi-model fallback).
+- [x] Implement OpenAI formatter adapter (`OpenAIFormatter` in `app/core/formatting/openai-formatter.js`).
+- [x] Implement version-controlled system prompts (`PromptEngine` with `PROMPT_VERSION = '2026.11.05-v1'`).
+- [x] Implement application-specific formatting conventions:
+  - IDE (`code_editor`): Programming syntax, camelCase/snake_case, identifiers, no chatty filler.
+  - Chat (`chat`): Natural, conversational, friendly, concise instant-message punctuation.
+  - Email (`email`): Professional salutations, clean paragraph blocks, formal tone.
+  - Documents (`document`): Long-form markdown paragraphs, headings, bullet-point lists.
+  - Terminal (`terminal`): Literal speech preservation; never generates dangerous executable shell commands.
+  - Unknown app: Balanced capitalization and neutral punctuation.
+- [x] Implement verbatim dictation mode (`mode: 'verbatim'` bypassing LLM hallucination).
+- [x] Implement clean dictation mode (`mode: 'clean'` removing filler words and stutter disfluencies).
+- [x] Implement contextual dictation mode (`mode: 'contextual'` with full tone shaping).
+- [x] Implement instruction mode (`PromptEngine.detectInstruction`):
+  - Grammar correction ("fix grammar: ...", "correct spelling: ...").
+  - Translation ("translate to [Language]: ...").
+  - Bullet-point formatting ("make bullet points: ...").
+  - Rephrasing / tone shifting ("rewrite politely: ...", "make concise: ...").
+- [x] Implement custom dictionary substitutions with whole-word regex and `$1`/`$&` injection protection.
+- [x] Implement snippet expansion with punctuation & quote normalization.
+- [x] Implement response validation (`ResponseValidator`):
+  - Strips markdown code block fences and conversational preambles.
+  - Strips outer wrapping quotation marks.
+  - Number preservation verification across formatting steps.
+  - Rejection and fallback recovery from LLM refusal patterns.
+- [x] Create test fixtures for all 8 required scenarios (`tests/fixtures/formatting-fixtures.js`).
+- [x] Automated test suite: 23/23 unit tests in `tests/unit/formatting_engine.test.js` passing.
+- [x] Total automated test suite: 98/98 Vitest tests + 5/5 native C# tests (103/103 total) passing.

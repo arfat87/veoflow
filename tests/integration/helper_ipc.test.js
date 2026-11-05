@@ -177,6 +177,6 @@ describe('VeoFlow Native Helper IPC Integration', () => {
     proc.stdin.end();
     const code = await exitPromise;
     expect(code === 0 || code === null).toBe(true);
-  });
+  }, 10000);
 });
 

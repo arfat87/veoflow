@@ -1,6 +1,6 @@
 # VeoFlow: Implementation Status Matrix
 
-**Document Version:** 1.5.0  
+**Document Version:** 1.6.0  
 **Last Updated:** November 5, 2026  
 **Status Key:**
 - `COMPLETE` : Implemented, verified, and automated tests passing.
@@ -40,10 +40,10 @@
 | **Prompt Injection Sanitizer** | `COMPLETE` | Strip role/system delimiters, control characters, bound length | Phase 05 |
 | **Target HWND Tracking** | `COMPLETE` | Window change detection between recording and injection | Phase 05 |
 | **User Application Rules** | `COMPLETE` | Custom database overrides for process classification | Phase 05 |
-| **Automated Testing Harness** | `COMPLETE` | 5/5 native C# tests + 75 Vitest unit/integration tests (80/80 total) | Phase 01 / 02 / 03 / 04 / 05 |
-| **Contextual Formatter** | `COMPLETE` | Multi-app tone matching & voice directive parser | Phase 06 |
-| **Custom Vocabulary** | `COMPLETE` | Safe whole-word replacement with regex escaping | Phase 06 / Phase 09 |
-| **Voice Snippets** | `COMPLETE` | Punctuation-normalized text expansion | Phase 06 / Phase 09 |
+| **Automated Testing Harness** | `COMPLETE` | 5/5 native C# tests + 98 Vitest unit/integration tests (103/103 total) | Phase 01 / 02 / 03 / 04 / 05 / 06 |
+| **Contextual Formatter Engine** | `COMPLETE` | Multi-app tone matching (IDE, Terminal, Chat, Email, Docs), v2026.11.05-v1 | Phase 06 |
+| **Instruction Mode & Directives**| `COMPLETE` | Grammar fix, translation, bullet lists, rephrasing, response validation | Phase 06 |
+| **Custom Vocabulary & Snippets** | `COMPLETE` | Whole-word regex substitution ($1 injection safe) & snippet expansion | Phase 06 |
 | **Floating HUD Pill** | `COMPLETE` | Frameless, glassmorphic, non-stealing overlay | Phase 08 |
 | **Settings Dashboard** | `COMPLETE` | Tabbed HTML/CSS UI with safe DOM event delegation | Phase 08 / Phase 09 |
 | **Local Persistence** | `PARTIAL` | Atomic JSON store (`~/.veoflow/veoflow_store.json`) | Phase 09 (SQLite) |
@@ -55,6 +55,6 @@
 ## 2. Milestone Alignment
 
 - **Milestone 1: Native Dictation Foundation (Phases 01–04):** `100% Complete` (Phases 01, 02, 03, and 04 all delivered and verified).
-- **Milestone 2: Intelligent Dictation (Phases 05–07):** `85% Complete` (Phase 05 Application Context Engine complete and verified with privacy defaults; tone matching and injection ready for Phase 06/07).
+- **Milestone 2: Intelligent Dictation (Phases 05–07):** `95% Complete` (Phases 05 Context Detection and 06 Contextual AI Formatter complete and fully verified; text injection verification next in Phase 07).
 - **Milestone 3: Complete Desktop Product (Phases 08–09):** `65% Complete` (HUD and settings complete; needs SQLite migration in Phase 09).
 - **Milestone 4: Production Release (Phases 10–12):** `25% Complete` (Vitest & C# test runners active; needs DPAPI and NSIS bundling).

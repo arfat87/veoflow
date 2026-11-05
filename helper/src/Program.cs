@@ -219,7 +219,13 @@ namespace VeoFlow.Helper
             }
             catch { }
 
-            Application.Exit();
+            try
+            {
+                Application.Exit();
+            }
+            catch { }
+
+            Environment.Exit(0);
         }
 
         private static void SendJson(object obj)

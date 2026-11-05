@@ -1,6 +1,6 @@
 # VeoFlow: Complete File Inventory & Architecture Mapping
 
-**Document Version:** 1.5.0  
+**Document Version:** 1.6.0  
 **Inventory Date:** November 5, 2026  
 **Engineering Governance:** Adheres to Section 3 of `VEOFLOW_ARCHITECTURE.md`.
 
@@ -67,7 +67,15 @@ veoflow/
 │   │   │   ├── app-classifier.js     # Semantic application classification & rule overrides
 │   │   │   ├── context-sanitizer.js  # Prompt injection token neutralization, control char stripping, bounding
 │   │   │   └── context-engine.js     # Privacy permission filtering, HWND change tracking, context envelopes
-│   │   ├── formatting/               # Reserved for Phase 06 contextual prompt engine
+│   │   ├── formatting/               # Phase 06 Contextual AI Formatter & Instruction Engine
+│   │   │   ├── base-formatter.js     # Abstract BaseFormatter interface
+│   │   │   ├── gemini-formatter.js   # Google Gemini LLM adapter with zero-thought latency
+│   │   │   ├── groq-formatter.js     # Groq LLM adapter with multi-model fallback (Qwen, GPT-OSS, LLaMA)
+│   │   │   ├── openai-formatter.js   # OpenAI GPT-4o-mini LLM adapter
+│   │   │   ├── prompt-engine.js      # Version-controlled prompt engine (v2026.11.05-v1), directives & rules
+│   │   │   ├── response-validator.js # LLM fence/quote stripping, number preservation & refusal checks
+│   │   │   ├── dictionary-service.js # Injection-safe whole-word dictionary substitutions & snippet expansion
+│   │   │   └── formatting-engine.js  # Master orchestrator, fallback chain resolution & pipeline integration
 │   │   ├── injection/                # Reserved for Phase 07 text injection strategies
 │   │   └── pipeline/                 # Reserved for dictation state machine orchestration
 │   │
@@ -116,7 +124,8 @@ veoflow/
 │   │   ├── audio_capture_state.test.js # Vitest specs for client audio engine state transitions
 │   │   ├── providers.test.js         # Vitest specs for Groq, OpenAI, Gemini adapters
 │   │   ├── transcription_engine.test.js # Vitest specs for fallback, language, and errors
-│   │   └── context_engine.test.js    # Vitest specs for app classification, sanitization, privacy & HWND tracking
+│   │   ├── context_engine.test.js    # Vitest specs for app classification, sanitization, privacy & HWND tracking
+│   │   └── formatting_engine.test.js # Vitest specs for LLM adapters, prompt rules, directives & validation
 │   ├── integration/
 │   │   ├── helper_ipc.test.js        # Vitest specs for native helper IPC & lifecycle
 │   │   └── notepad_live.test.js      # Vitest live integration with Notepad.exe
@@ -125,7 +134,8 @@ veoflow/
 │   │   ├── silence_16k.wav           # 16kHz mono pure silence WAV fixture (32 KB)
 │   │   ├── sine_440hz_16k.wav        # 16kHz mono 440Hz tone WAV fixture (32 KB)
 │   │   ├── noisy_16k.wav             # 16kHz mono random noise WAV fixture (32 KB)
-│   │   └── short_burst_16k.wav       # 16kHz mono 300ms burst WAV fixture (9.6 KB)
+│   │   ├── short_burst_16k.wav       # 16kHz mono 300ms burst WAV fixture (9.6 KB)
+│   │   └── formatting-fixtures.js    # Spoken transcripts (chat, email, code, Hinglish, directives, terminal)
 │   └── e2e/
 │
 └── docs/                             # Engineering governance & audit documentation
