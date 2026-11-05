@@ -1,6 +1,6 @@
 # VeoFlow: Complete File Inventory & Architecture Mapping
 
-**Document Version:** 1.6.0  
+**Document Version:** 1.7.0  
 **Inventory Date:** November 5, 2026  
 **Engineering Governance:** Adheres to Section 3 of `VEOFLOW_ARCHITECTURE.md`.
 
@@ -76,7 +76,10 @@ veoflow/
 │   │   │   ├── response-validator.js # LLM fence/quote stripping, number preservation & refusal checks
 │   │   │   ├── dictionary-service.js # Injection-safe whole-word dictionary substitutions & snippet expansion
 │   │   │   └── formatting-engine.js  # Master orchestrator, fallback chain resolution & pipeline integration
-│   │   ├── injection/                # Reserved for Phase 07 text injection strategies
+│   │   ├── injection/                # Phase 07 Smart Text Injection Subsystem
+│   │   │   ├── transaction-tracker.js # SHA-256 transaction auditing (pending, inserted, verified, failed)
+│   │   │   ├── target-manager.js     # Target window capture, HWND normalization & revalidation
+│   │   │   └── injection-manager.js  # Main insertion orchestrator, UIA/clipboard dispatch & recovery
 │   │   └── pipeline/                 # Reserved for dictation state machine orchestration
 │   │
 │   ├── database/
@@ -125,7 +128,8 @@ veoflow/
 │   │   ├── providers.test.js         # Vitest specs for Groq, OpenAI, Gemini adapters
 │   │   ├── transcription_engine.test.js # Vitest specs for fallback, language, and errors
 │   │   ├── context_engine.test.js    # Vitest specs for app classification, sanitization, privacy & HWND tracking
-│   │   └── formatting_engine.test.js # Vitest specs for LLM adapters, prompt rules, directives & validation
+│   │   ├── formatting_engine.test.js # Vitest specs for LLM adapters, prompt rules, directives & validation
+│   │   └── injection_manager.test.js # Vitest specs for target validation, UIA, clipboard restoration & auditing
 │   ├── integration/
 │   │   ├── helper_ipc.test.js        # Vitest specs for native helper IPC & lifecycle
 │   │   └── notepad_live.test.js      # Vitest live integration with Notepad.exe

@@ -4,10 +4,12 @@
  */
 import DiffMatchPatch from 'diff-match-patch';
 import helper from './helperClient.js';
+import { defaultInjectionManager } from './injection/injection-manager.js';
 
 export class DiffPaster {
-  constructor() {
+  constructor(injectionManager = null) {
     this.dmp = new DiffMatchPatch();
+    this.injectionManager = injectionManager || defaultInjectionManager;
     this.lastPastedText = '';
   }
 
@@ -22,17 +24,18 @@ export class DiffPaster {
     return diffs;
   }
 
-  // Execute full paste via native helper
-  async pasteFull(text) {
+  // Execute full paste via injection manager
+  async pasteFull(text, targetContext = {}, options = {}) {
     if (!text) return false;
     this.lastPastedText = text;
-    return await helper.pasteText(text);
+    const res = await this.injectionManager.inject(text, targetContext, options);
+    return res.success;
   }
 
   // Execute incremental diff paste (for live streaming partial transcripts)
-  async pasteIncremental(newText) {
+  async pasteIncremental(newText, targetContext = {}, options = {}) {
     if (!this.lastPastedText) {
-      return await this.pasteFull(newText);
+      return await this.pasteFull(newText, targetContext, options);
     }
 
     const diffs = this.calculateDiff(newText);
@@ -51,14 +54,15 @@ export class DiffPaster {
 
     // If change is simple append:
     if (backspaces === 0 && textToAppend.length > 0) {
-      return await helper.pasteText(textToAppend);
+      const res = await this.injectionManager.inject(textToAppend, targetContext, options);
+      return res.success;
     }
 
     // Otherwise, replace with full new text
-    return await helper.pasteText(newText);
+    const res = await this.injectionManager.inject(newText, targetContext, options);
+    return res.success;
   }
 }
 
-const defaultDiffPaster = new DiffPaster();
+export const defaultDiffPaster = new DiffPaster();
 export default defaultDiffPaster;
-

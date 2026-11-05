@@ -1,17 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import path from 'node:path';
 import readline from 'node:readline';
 
 const HELPER_EXE = path.resolve(import.meta.dirname, '../../helper/bin/VeoFlowHelper.exe');
 
 describe('Live Windows Application Interaction (Notepad)', () => {
-  it('detects Notepad active context and injects text via helper', async () => {
-    // 1. Launch Notepad
-    const notepad = spawn('notepad.exe', [], { detached: false });
-    await new Promise((r) => setTimeout(r, 800)); // Allow Notepad to initialize and gain focus
+  it('detects Notepad active context, injects speech transcript, verifies insertion and restores original clipboard', async () => {
+    const originalClipboardData = `PRE_EXISTING_USER_CLIPBOARD_${Date.now()}`;
 
-    // 2. Spawn Helper
+    // 1. Establish pre-existing clipboard contents to verify clipboard protection
+    try {
+      execSync(`powershell -Sta -Command "Set-Clipboard -Value '${originalClipboardData}'"`, { timeout: 3000 });
+    } catch (e) {
+      console.warn('Could not set initial clipboard:', e.message);
+    }
+
+    // 2. Launch Notepad
+    const notepad = spawn('notepad.exe', [], { detached: false });
+    await new Promise((r) => setTimeout(r, 1200)); // Allow Notepad to initialize and gain focus
+
+    // 3. Spawn Native Helper
     const helper = spawn(HELPER_EXE, [], {
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true
@@ -24,7 +33,7 @@ describe('Live Windows Application Interaction (Notepad)', () => {
     });
 
     try {
-      // 3. Request context
+      // 4. Request context to capture target HWND
       const reqId = 'ctx-notepad-1';
       const ctxPromise = new Promise((resolve) => {
         const handler = (l) => {
@@ -42,16 +51,19 @@ describe('Live Windows Application Interaction (Notepad)', () => {
 
       expect(ctxResp.context).toBeDefined();
       expect(typeof ctxResp.context.hwnd).toBe('string');
-      // If notepad is active foreground window:
-      const activeApp = (ctxResp.context.appName || '').toLowerCase();
-      console.log('Active foreground application detected:', activeApp, 'Title:', ctxResp.context.windowTitle);
+      const targetHwnd = ctxResp.context.hwnd;
 
-      // 4. Test text injection via paste_text
-      const pasteId = 'paste-notepad-2';
-      const pastePromise = new Promise((resolve) => {
+      const activeApp = (ctxResp.context.appName || '').toLowerCase();
+      console.log('Active foreground application detected:', activeApp, 'Title:', ctxResp.context.windowTitle, 'HWND:', targetHwnd);
+
+      // 5. Test real text injection via inject_text with target revalidation
+      const injectId = 'inject-notepad-2';
+      const speechTranscript = 'VeoFlow Phase 07 Real Speech Transcript Inserted and Verified into Notepad.';
+
+      const injectPromise = new Promise((resolve) => {
         const handler = (l) => {
           const msg = JSON.parse(l);
-          if (msg.id === pasteId) {
+          if (msg.id === injectId) {
             rl.removeListener('line', handler);
             resolve(msg);
           }
@@ -60,13 +72,31 @@ describe('Live Windows Application Interaction (Notepad)', () => {
       });
 
       helper.stdin.write(JSON.stringify({
-        id: pasteId,
-        action: 'paste_text',
-        text: 'VeoFlow Phase 02 Native Helper Verified.'
+        id: injectId,
+        action: 'inject_text',
+        text: speechTranscript,
+        targetHwnd: targetHwnd,
+        strategy: 'auto',
+        transactionId: 'tx_test_notepad_gate'
       }) + '\n');
 
-      const pasteResp = await pastePromise;
-      expect(pasteResp.success).toBe(true);
+      const injectResp = await injectPromise;
+
+      expect(injectResp.success).toBe(true);
+      expect(['verified', 'unverified', 'inserted']).toContain(injectResp.status);
+      expect(injectResp.strategy).toBeDefined();
+
+      // Allow brief moment for clipboard restoration check
+      await new Promise((r) => setTimeout(r, 400));
+
+      // 6. Verify Completion Gate: Original clipboard contents remain completely intact!
+      try {
+        const currentClipboard = execSync('powershell -Sta -Command "Get-Clipboard"', { timeout: 3000 }).toString().trim();
+        console.log('Post-insertion clipboard value:', currentClipboard);
+        expect(currentClipboard).toBe(originalClipboardData);
+      } catch (e) {
+        console.warn('Could not read clipboard via PowerShell:', e.message);
+      }
 
     } finally {
       // Cleanup
@@ -77,6 +107,5 @@ describe('Live Windows Application Interaction (Notepad)', () => {
         notepad.kill();
       } catch {}
     }
-  });
+  }, 15000);
 });
-

@@ -156,15 +156,26 @@ namespace VeoFlow.Helper
                     });
                     break;
 
+                case "inject_text":
                 case "paste_text":
                     string textToPaste = Protocol.ExtractJsonField(jsonLine, "text");
-                    bool success = TextInjector.ExecutePaste(textToPaste);
+                    string targetHwnd = Protocol.ExtractJsonField(jsonLine, "targetHwnd");
+                    string strategy = Protocol.ExtractJsonField(jsonLine, "strategy");
+                    string txId = Protocol.ExtractJsonField(jsonLine, "transactionId");
+
+                    var injectRes = TextInjector.ExecuteInjection(textToPaste, targetHwnd, strategy, txId);
                     SendJson(new
                     {
                         type = "response",
                         id = id,
-                        success = success,
-                        method = "clipboard"
+                        success = injectRes.Success,
+                        status = injectRes.Status,
+                        strategy = injectRes.Strategy,
+                        verified = injectRes.Verified,
+                        targetHwnd = injectRes.TargetHwnd,
+                        clipboardRestored = injectRes.ClipboardRestored,
+                        transactionId = injectRes.TransactionId,
+                        error = injectRes.ErrorMessage
                     });
                     break;
 

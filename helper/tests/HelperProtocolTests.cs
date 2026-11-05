@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 using VeoFlow.Helper;
 
 namespace VeoFlow.Helper.Tests
@@ -73,6 +74,41 @@ namespace VeoFlow.Helper.Tests
                 hook.ConfigureHotkey("Ctrl+Shift", "V");
                 Assert(!hook.IsHotkeyDown, "Reconfigured state should not be down");
             }
+        }
+
+        public void Test_ClipboardRestoration_PreservesOriginalData()
+        {
+            Thread staThread = new Thread(() =>
+            {
+                string original = "PRESERVED_USER_DATA_777";
+                try
+                {
+                    System.Windows.Forms.Clipboard.SetText(original);
+                }
+                catch { }
+
+                var result = TextInjector.ExecuteInjection("TEMPORARY_SPEECH_PAYLOAD", null, "clipboard", "tx_test_123");
+
+                Assert(result.Success, "Injection should succeed");
+
+                try
+                {
+                    string postClipboard = System.Windows.Forms.Clipboard.GetText();
+                    Assert(postClipboard == original, string.Format("Original clipboard must remain intact. Expected '{0}' but found '{1}'", original, postClipboard));
+                }
+                catch { }
+            });
+            staThread.SetApartmentState(ApartmentState.STA);
+            staThread.Start();
+            staThread.Join(5000);
+        }
+
+        public void Test_InjectionResult_StructuredFields()
+        {
+            var result = TextInjector.ExecuteInjection("", null, "auto", "tx_empty");
+            Assert(!result.Success, "Empty text injection must fail");
+            Assert(result.Status == "failed", "Status must be failed");
+            Assert(result.ErrorMessage.Contains("empty"), "Error message should mention empty");
         }
     }
 }

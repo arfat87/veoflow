@@ -2,23 +2,181 @@ using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
+using System.Windows.Automation;
 
 namespace VeoFlow.Helper
 {
+    public class InjectionResult
+    {
+        public bool Success { get; set; }
+        public string Status { get; set; } // "verified", "inserted", "unverified", "failed", "target_mismatch"
+        public string Strategy { get; set; } // "uia_value", "clipboard_paste", "send_input_unicode"
+        public bool Verified { get; set; }
+        public string TargetHwnd { get; set; }
+        public bool ClipboardRestored { get; set; }
+        public string TransactionId { get; set; }
+        public string ErrorMessage { get; set; }
+
+        public InjectionResult()
+        {
+            Success = false;
+            Status = "pending";
+            Strategy = "clipboard_paste";
+            Verified = false;
+            TargetHwnd = "";
+            ClipboardRestored = false;
+            TransactionId = "";
+            ErrorMessage = "";
+        }
+    }
+
     public static class TextInjector
     {
         public const int CLIPBOARD_CONSUMPTION_WAIT_MS = 250;
 
         public static bool ExecutePaste(string text)
         {
-            if (string.IsNullOrEmpty(text)) return false;
+            var result = ExecuteInjection(text, null, "auto", null);
+            return result.Success;
+        }
 
-            bool pasteOk = false;
+        public static InjectionResult ExecuteInjection(string text, string targetHwnd = null, string strategy = "auto", string transactionId = null)
+        {
+            var result = new InjectionResult
+            {
+                TargetHwnd = targetHwnd ?? "0x0",
+                TransactionId = transactionId ?? "",
+                Strategy = strategy ?? "auto"
+            };
+
+            if (string.IsNullOrEmpty(text))
+            {
+                result.Status = "failed";
+                result.ErrorMessage = "Text payload is empty";
+                return result;
+            }
+
+            // 1. Target Validation & Foreground Verification
+            IntPtr currentHwnd = NativeMethods.GetForegroundWindow();
+            long targetVal = 0;
+
+            if (!string.IsNullOrEmpty(targetHwnd) && targetHwnd != "0x0")
+            {
+                if (targetHwnd.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                {
+                    long.TryParse(targetHwnd.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out targetVal);
+                }
+                else
+                {
+                    long.TryParse(targetHwnd, out targetVal);
+                }
+
+                if (targetVal != 0)
+                {
+                    IntPtr targetPtr = new IntPtr(targetVal);
+
+                    if (!NativeMethods.IsWindow(targetPtr))
+                    {
+                        result.Status = "failed";
+                        result.ErrorMessage = "Target window is no longer valid";
+                        return result;
+                    }
+
+                    if (currentHwnd.ToInt64() != targetVal)
+                    {
+                        // Bring target window to foreground
+                        NativeMethods.SetForegroundWindow(targetPtr);
+                        Thread.Sleep(50);
+                        currentHwnd = NativeMethods.GetForegroundWindow();
+
+                        if (currentHwnd.ToInt64() != targetVal)
+                        {
+                            result.Status = "target_mismatch";
+                            result.ErrorMessage = "Foreground window mismatch: target window could not be activated";
+                            return result;
+                        }
+                    }
+                }
+            }
+
+            // 2. UI Automation Insertion Strategy Check
+            string chosenStrategy = (strategy ?? "auto").ToLower();
+            if (chosenStrategy == "uia" || chosenStrategy == "auto")
+            {
+                bool uiaSuccess = TryUiaDirectInsertion(text, ref result);
+                if (uiaSuccess)
+                {
+                    return result;
+                }
+                // If UIA was explicitly demanded but failed, do not proceed unless auto
+                if (chosenStrategy == "uia")
+                {
+                    result.Status = "failed";
+                    result.ErrorMessage = "UIA insertion not supported on focused element";
+                    return result;
+                }
+            }
+
+            // 3. Clipboard-based Injection with Full Safe Restoration
+            ExecuteClipboardInjection(text, ref result);
+
+            return result;
+        }
+
+        private static bool TryUiaDirectInsertion(string text, ref InjectionResult result)
+        {
+            bool success = false;
+            try
+            {
+                AutomationElement focused = AutomationElement.FocusedElement;
+                if (focused != null)
+                {
+                    object valPatternObj;
+                    if (focused.TryGetCurrentPattern(ValuePattern.Pattern, out valPatternObj))
+                    {
+                        ValuePattern valPattern = (ValuePattern)valPatternObj;
+                        string currentVal = valPattern.Current.Value ?? "";
+
+                        // Rule: NEVER overwrite an entire field accidentally.
+                        // Only set value if the current control is empty!
+                        if (string.IsNullOrEmpty(currentVal))
+                        {
+                            valPattern.SetValue(text);
+                            Thread.Sleep(50);
+
+                            // Verify
+                            string postVal = valPattern.Current.Value ?? "";
+                            if (postVal.Contains(text))
+                            {
+                                result.Success = true;
+                                result.Strategy = "uia_value";
+                                result.Status = "verified";
+                                result.Verified = true;
+                                success = true;
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return success;
+        }
+
+        private static void ExecuteClipboardInjection(string text, ref InjectionResult result)
+        {
+            InjectionResult localResult = result;
             Thread pasteThread = new Thread(() =>
             {
                 IDataObject previousData = null;
+                string previousText = null;
+
                 try
                 {
+                    if (Clipboard.ContainsText())
+                    {
+                        previousText = Clipboard.GetText();
+                    }
                     previousData = Clipboard.GetDataObject();
                 }
                 catch { }
@@ -28,35 +186,93 @@ namespace VeoFlow.Helper
                     Clipboard.SetText(text);
                     Thread.Sleep(30);
 
+                    // Revalidate target window immediately before keystroke
                     SendCtrlV();
-                    pasteOk = true;
+                    localResult.Success = true;
+                    localResult.Strategy = "clipboard_paste";
 
                     // Allow target application to consume clipboard
                     Thread.Sleep(CLIPBOARD_CONSUMPTION_WAIT_MS);
 
-                    if (previousData != null)
+                    // Post-paste verification via UI Automation or focus check
+                    VerifyInsertion(text, ref localResult);
+
+                    // Safe Clipboard Restoration Check:
+                    // Check whether clipboard still contains our temporary payload
+                    string currentText = null;
+                    try
                     {
-                        try
+                        if (Clipboard.ContainsText())
                         {
-                            Clipboard.SetDataObject(previousData, true);
+                            currentText = Clipboard.GetText();
                         }
-                        catch { }
+                    }
+                    catch { }
+
+                    if (currentText == text)
+                    {
+                        // Payload consumed and unchanged: Safe to restore user's original data
+                        if (previousData != null)
+                        {
+                            try
+                            {
+                                Clipboard.SetDataObject(previousData, true);
+                                localResult.ClipboardRestored = true;
+                            }
+                            catch { }
+                        }
+                        else
+                        {
+                            try
+                            {
+                                Clipboard.Clear();
+                                localResult.ClipboardRestored = true;
+                            }
+                            catch { }
+                        }
+                    }
+                    else
+                    {
+                        // User or another application copied new content: Preserve unrelated clipboard modifications!
+                        localResult.ClipboardRestored = false;
                     }
                 }
                 catch
                 {
                     // Fallback to direct simulated keystrokes using KEYEVENTF_UNICODE
                     SendDirectText(text);
-                    pasteOk = true;
+                    localResult.Success = true;
+                    localResult.Strategy = "send_input_unicode";
+                    localResult.Status = "unverified";
+                    localResult.Verified = false;
                 }
             });
 
             pasteThread.SetApartmentState(ApartmentState.STA);
             pasteThread.IsBackground = true;
             pasteThread.Start();
-            pasteThread.Join(3000);
+            pasteThread.Join(4000);
 
-            return pasteOk;
+            result = localResult;
+        }
+
+        private static void VerifyInsertion(string text, ref InjectionResult result)
+        {
+            try
+            {
+                FocusContextData focus = UIAutomationReader.InspectFocusedElement(150);
+                if (!string.IsNullOrEmpty(focus.Contents) && focus.Contents.Contains(text))
+                {
+                    result.Verified = true;
+                    result.Status = "verified";
+                    return;
+                }
+            }
+            catch { }
+
+            // If verification could not read text directly, report unverified
+            result.Verified = false;
+            result.Status = "unverified";
         }
 
         private static void SendCtrlV()
@@ -113,4 +329,3 @@ namespace VeoFlow.Helper
         }
     }
 }
-

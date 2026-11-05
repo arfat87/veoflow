@@ -97,7 +97,9 @@ export function registerIpcHandlers({
         if (overlay && !overlay.isDestroyed()) {
           overlay.webContents.send('state-change', { state: 'pasting', preview: formattedText });
         }
-        await diffPaster.pasteFull(formattedText);
+        await diffPaster.pasteFull(formattedText, dictationState.currentContext, {
+          rawTranscript: rawAsr
+        });
       }
 
       const latencyMs = Date.now() - startTime;

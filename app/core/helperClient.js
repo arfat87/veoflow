@@ -167,12 +167,43 @@ export class HelperClient extends EventEmitter {
 
   async pasteText(text) {
     if (!text) return false;
+    const res = await this.injectText(text);
+    return res.success;
+  }
+
+  async injectText(text, options = {}) {
+    if (!text) {
+      return { success: false, status: 'failed', error: 'Empty text payload' };
+    }
     try {
-      const res = await this.sendCommand('paste_text', { text });
-      return !!res.success;
+      const payload = {
+        text,
+        targetHwnd: options.targetHwnd || '',
+        strategy: options.strategy || 'auto',
+        transactionId: options.transactionId || ''
+      };
+      const res = await this.sendCommand('inject_text', payload);
+      return {
+        success: !!res.success,
+        status: res.status || (res.success ? 'inserted' : 'failed'),
+        strategy: res.strategy || 'clipboard_paste',
+        verified: !!res.verified,
+        targetHwnd: res.targetHwnd || options.targetHwnd || '',
+        clipboardRestored: !!res.clipboardRestored,
+        transactionId: res.transactionId || options.transactionId || '',
+        error: res.error || null
+      };
     } catch (err) {
-      logger.error('pasteText error:', err.message);
-      return false;
+      logger.error('injectText error:', err.message);
+      return {
+        success: false,
+        status: 'failed',
+        error: err.message,
+        strategy: options.strategy || 'auto',
+        verified: false,
+        clipboardRestored: false,
+        transactionId: options.transactionId || ''
+      };
     }
   }
 
