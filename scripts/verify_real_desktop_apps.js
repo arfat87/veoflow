@@ -177,3 +177,4 @@ runDesktopAppAcceptance().catch((e) => {
   console.error('\n[FAIL] Real Desktop Acceptance Suite failed:', e);
   process.exit(1);
 });
+

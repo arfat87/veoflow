@@ -92,8 +92,8 @@ VeoFlow is distributed for 64-bit Windows 10 and Windows 11.
 
 | Package | File Name | Size | SHA-256 Checksum |
 |---|---|---|---|
-| **Setup Installer (Recommended)** | [`VeoFlow-Setup-1.0.0-x64.exe`](dist_release/VeoFlow-Setup-1.0.0-x64.exe) | 99.3 MB | `F4A9ABAB3D40593F5603AD3E244B8E3E5FC1B6FBBA4402B4CF8256540789F73B` |
-| **Standalone Portable** | [`VeoFlow-Portable-1.0.0-x64.exe`](dist_release/VeoFlow-Portable-1.0.0-x64.exe) | 86.6 MB | `3AB96B6788C16EF1602D5248963D21D9119C952343E025AB25BCE52677515E80` |
+| **Setup Installer (Recommended)** | [`VeoFlow-Setup-1.0.0-x64.exe`](dist_release_candidate/VeoFlow-Setup-1.0.0-x64.exe) | 99.4 MB | `DC70A12BA2607ADC52A4D9484ABABC09D2ED7855A86C1E5C099737773AF92018` |
+| **Standalone Portable** | [`VeoFlow-Portable-1.0.0-x64.exe`](dist_release_candidate/VeoFlow-Portable-1.0.0-x64.exe) | 86.7 MB | `DA625847894ADFF702A654A6D4E63B4B661BC5731405AEC6B33865A4E65C5C25` |
 
 ### Installation Instructions
 1. Download **`VeoFlow-Setup-1.0.0-x64.exe`**.

@@ -56,10 +56,10 @@ All official release binaries have been built from source and verified. Use the 
 
 | Artifact File | Description | Size | SHA-256 Checksum |
 |---|---|---|---|
-| **`VeoFlow-Setup-1.0.0-x64.exe`** | NSIS Setup Installer | 99,382,198 bytes | `F4A9ABAB3D40593F5603AD3E244B8E3E5FC1B6FBBA4402B4CF8256540789F73B` |
-| **`VeoFlow-Portable-1.0.0-x64.exe`** | Standalone Portable Executable | 86,647,975 bytes | `3AB96B6788C16EF1602D5248963D21D9119C952343E025AB25BCE52677515E80` |
-| **`win-unpacked\VeoFlow.exe`** | Core Desktop Binary | 190,557,184 bytes | `87A93AA26DB3045B68712BC97AD4EDEA0E95E62AE7D2096D4A4BAADFB26F80A3` |
-| **`win-unpacked\resources\bin\VeoFlowHelper.exe`** | Native Helper Binary | 44,032 bytes | `C5905913F2CFFD27BE6DB34CD2BA37A2011E094B8D28CB978DE4AAE05A5FC7C3` |
+| **`VeoFlow-Setup-1.0.0-x64.exe`** | NSIS Setup Installer | 99,385,066 bytes | `DC70A12BA2607ADC52A4D9484ABABC09D2ED7855A86C1E5C099737773AF92018` |
+| **`VeoFlow-Portable-1.0.0-x64.exe`** | Standalone Portable Executable | 86,658,615 bytes | `DA625847894ADFF702A654A6D4E63B4B661BC5731405AEC6B33865A4E65C5C25` |
+| **`win-unpacked\VeoFlow.exe`** | Core Desktop Binary | 190,557,184 bytes | `B826695B544127A5C2BFF73FE361C53BEB41BC2EB20A8B97551C591CD142C359` |
+| **`win-unpacked\resources\bin\VeoFlowHelper.exe`** | Native Helper Binary | 47,616 bytes | `4599C3E0737CEE185054F10E9125F995373D14624EE3032BD7D2B5DDA51B1860` |
 
 ---
 
@@ -76,7 +76,7 @@ Get-FileHash -Algorithm SHA256 .\VeoFlow-Setup-1.0.0-x64.exe
 ```
 Confirm the output hash matches:
 ```
-F4A9ABAB3D40593F5603AD3E244B8E3E5FC1B6FBBA4402B4CF8256540789F73B
+DC70A12BA2607ADC52A4D9484ABABC09D2ED7855A86C1E5C099737773AF92018
 ```
 
 ### Windows SmartScreen Note:

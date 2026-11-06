@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist_release/
+dist_release_candidate/
 *.tmp
 .env
 .env.*
