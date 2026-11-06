@@ -5,8 +5,10 @@ namespace VeoFlow.Helper.Tests
 {
     class TestRunner
     {
+        [STAThread]
         static int Main(string[] args)
         {
+            NativeMethods.EnsureAttachedToInputDesktop();
             Console.WriteLine("==================================================");
             Console.WriteLine(" VeoFlow Native Helper C# Unit Test Suite");
             Console.WriteLine("==================================================");

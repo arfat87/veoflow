@@ -42,6 +42,38 @@ namespace VeoFlow.Helper
 
         public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 
+        // GetAncestor flags
+        public const uint GA_PARENT = 1;
+        public const uint GA_ROOT = 2;
+        public const uint GA_ROOTOWNER = 3;
+
+        public const uint DESKTOP_ALL_ACCESS = 0x01FF;
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, uint dwDesiredAccess);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool SetThreadDesktop(IntPtr hDesktop);
+
+        [DllImport("user32.dll")]
+        public static extern bool CloseDesktop(IntPtr hDesktop);
+
+        public static void EnsureAttachedToInputDesktop()
+        {
+            try
+            {
+                IntPtr hInput = OpenInputDesktop(0, false, DESKTOP_ALL_ACCESS);
+                if (hInput != IntPtr.Zero)
+                {
+                    SetThreadDesktop(hInput);
+                }
+            }
+            catch { }
+        }
+
         [DllImport("user32.dll")]
         public static extern IntPtr GetForegroundWindow();
 

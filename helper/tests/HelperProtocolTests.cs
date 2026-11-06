@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Windows.Forms;
 using VeoFlow.Helper;
 
 namespace VeoFlow.Helper.Tests
@@ -13,6 +15,43 @@ namespace VeoFlow.Helper.Tests
             {
                 throw new Exception("Assertion Failed: " + message);
             }
+        }
+
+        private static bool SafeSetClipboard(string text)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                try
+                {
+                    Clipboard.SetText(text);
+                    return true;
+                }
+                catch
+                {
+                    Thread.Sleep(30);
+                }
+            }
+            return false;
+        }
+
+        private static string SafeGetClipboard()
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                try
+                {
+                    if (Clipboard.ContainsText())
+                    {
+                        return Clipboard.GetText();
+                    }
+                    return "";
+                }
+                catch
+                {
+                    Thread.Sleep(30);
+                }
+            }
+            return "";
         }
 
         public void Test_NativeInputStructSize_Is40BytesOnX64()
@@ -76,36 +115,94 @@ namespace VeoFlow.Helper.Tests
             }
         }
 
+        public void Test_StrictForeground_ZeroHwnd_Aborts()
+        {
+            var res1 = TextInjector.ExecuteInjection("Hello", null, "clipboard", "tx_zero_1");
+            Assert(!res1.Success, "Null HWND must not succeed");
+            Assert(res1.Status == "aborted", "Null HWND status must be aborted");
+
+            var res2 = TextInjector.ExecuteInjection("Hello", "0x0", "clipboard", "tx_zero_2");
+            Assert(!res2.Success, "0x0 HWND must not succeed");
+            Assert(res2.Status == "aborted", "0x0 HWND status must be aborted");
+
+            var res3 = TextInjector.ExecuteInjection("Hello", "0", "clipboard", "tx_zero_3");
+            Assert(!res3.Success, "0 HWND must not succeed");
+            Assert(res3.Status == "aborted", "0 HWND status must be aborted");
+        }
+
+        public void Test_StrictForeground_DestroyedHwnd_Aborts()
+        {
+            var res = TextInjector.ExecuteInjection("Hello", "0xDEADBEEF", "clipboard", "tx_destroyed");
+            Assert(!res.Success, "Non-existent HWND must not succeed");
+            Assert(res.Status == "aborted", "Non-existent HWND status must be aborted");
+            Assert(res.ErrorMessage.Contains("does not exist") || res.ErrorMessage.Contains("destroyed"), "Error must state window does not exist or destroyed");
+        }
+
+        public void Test_StrictForeground_BackgroundWindow_Aborts()
+        {
+            // Shell tray or desktop window is guaranteed not to be the foreground console window
+            IntPtr desktop = NativeMethods.GetAncestor(NativeMethods.GetForegroundWindow(), NativeMethods.GA_ROOTOWNER);
+            // Or get Shell_TrayWnd
+            IntPtr fg = NativeMethods.GetForegroundWindow();
+            // Use an arbitrary valid window handle that is not foreground (or zero)
+            // If fg is valid, any other valid top-level window must abort
+            var res = TextInjector.ExecuteInjection("Background Payload", "0x1234", "clipboard", "tx_bg");
+            Assert(!res.Success, "Arbitrary non-foreground window must abort");
+            Assert(res.Status == "aborted", "Status must be aborted");
+        }
+
         public void Test_ClipboardRestoration_PreservesOriginalData()
         {
-            Thread staThread = new Thread(() =>
+            Exception threadEx = null;
+            Thread t = new Thread(() =>
             {
-                string original = "PRESERVED_USER_DATA_777";
                 try
                 {
-                    System.Windows.Forms.Clipboard.SetText(original);
-                }
-                catch { }
+                    NativeMethods.EnsureAttachedToInputDesktop();
+                    IntPtr fg = NativeMethods.GetForegroundWindow();
+                    string fgHwnd = fg != IntPtr.Zero ? "0x" + fg.ToInt64().ToString("X") : "0x0";
 
-                var result = TextInjector.ExecuteInjection("TEMPORARY_SPEECH_PAYLOAD", null, "clipboard", "tx_test_123");
+                    string original = "PRESERVED_USER_DATA_777";
+                    SafeSetClipboard(original);
 
-                Assert(result.Success, "Injection should succeed");
+                    var result = TextInjector.ExecuteInjection("TEMPORARY_SPEECH_PAYLOAD", fgHwnd, "clipboard", "tx_test_123");
 
-                try
-                {
-                    string postClipboard = System.Windows.Forms.Clipboard.GetText();
+                    Assert(result.Success, "Injection on active foreground window should succeed: " + result.ErrorMessage + " status: " + result.Status + " fgHwnd: " + fgHwnd);
+
+                    string postClipboard = SafeGetClipboard();
                     Assert(postClipboard == original, string.Format("Original clipboard must remain intact. Expected '{0}' but found '{1}'", original, postClipboard));
+                    Assert(result.ClipboardRestored, "ClipboardRestored flag must be true");
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    threadEx = ex;
+                }
             });
-            staThread.SetApartmentState(ApartmentState.STA);
-            staThread.Start();
-            staThread.Join(5000);
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+            t.Join(5000);
+
+            if (threadEx != null) throw threadEx;
+        }
+
+        public void Test_ClipboardRestoration_OnAbort()
+        {
+            string original = "PRESERVED_ON_ABORT_12345";
+            SafeSetClipboard(original);
+
+            // Call with zero HWND which triggers abort
+            var result = TextInjector.ExecuteInjection("TEMPORARY_SPEECH_PAYLOAD", "0x0", "clipboard", "tx_abort_clip");
+
+            Assert(!result.Success, "Abort must report success false");
+            Assert(result.Status == "aborted", "Status must be aborted");
+
+            string postClipboard = SafeGetClipboard();
+            Assert(postClipboard == original, "Original clipboard must remain intact after abort");
         }
 
         public void Test_InjectionResult_StructuredFields()
         {
-            var result = TextInjector.ExecuteInjection("", null, "auto", "tx_empty");
+            var result = TextInjector.ExecuteInjection("", "0x1234", "auto", "tx_empty");
             Assert(!result.Success, "Empty text injection must fail");
             Assert(result.Status == "failed", "Status must be failed");
             Assert(result.ErrorMessage.Contains("empty"), "Error message should mention empty");
@@ -129,37 +226,12 @@ namespace VeoFlow.Helper.Tests
 
         public void Test_ConcurrentClipboardModification_PreservesExternalData()
         {
-            Thread staThread = new Thread(() =>
-            {
-                string original = "ORIGINAL_DATA_999";
-                string externalNewData = "USER_COPIED_NEW_CONTENT_DURING_PASTE";
+            string externalNewData = "USER_COPIED_NEW_CONTENT_DURING_PASTE";
+            SafeSetClipboard(externalNewData);
 
-                try
-                {
-                    System.Windows.Forms.Clipboard.SetText(original);
-                }
-                catch { }
-
-                // Simulate injection where during the operation, another application/user changed clipboard
-                // We execute injection but immediately simulate external clipboard update
-                var result = new InjectionResult
-                {
-                    TargetHwnd = "0x0",
-                    TransactionId = "tx_concurrent",
-                    Strategy = "clipboard_paste"
-                };
-
-                // Directly verify the logic that checks if clipboard changed
-                System.Windows.Forms.Clipboard.SetText(externalNewData);
-                string currentText = System.Windows.Forms.Clipboard.GetText();
-
-                // If currentText != temporaryText, clipboard must NOT be overwritten back to original
-                Assert(currentText == externalNewData, "Clipboard holds external data");
-                Assert(currentText != "TEMPORARY_PAYLOAD", "External data was not equal to temporary payload");
-            });
-            staThread.SetApartmentState(ApartmentState.STA);
-            staThread.Start();
-            staThread.Join(5000);
+            string currentText = SafeGetClipboard();
+            Assert(currentText == externalNewData, "Clipboard holds external data");
+            Assert(currentText != "TEMPORARY_PAYLOAD", "External data was not equal to temporary payload");
         }
     }
 }

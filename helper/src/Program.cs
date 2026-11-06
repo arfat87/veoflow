@@ -18,6 +18,7 @@ namespace VeoFlow.Helper
         [STAThread]
         static void Main(string[] args)
         {
+            NativeMethods.EnsureAttachedToInputDesktop();
             Console.InputEncoding = Encoding.UTF8;
             Console.OutputEncoding = Encoding.UTF8;
 
@@ -89,6 +90,7 @@ namespace VeoFlow.Helper
 
         private static void IpcListenerLoop()
         {
+            NativeMethods.EnsureAttachedToInputDesktop();
             string line;
             while ((line = Console.ReadLine()) != null)
             {

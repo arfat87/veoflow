@@ -45,9 +45,20 @@ namespace VeoFlow.Verification
         [DllImport("user32.dll")]
         static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, uint dwDesiredAccess);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool SetThreadDesktop(IntPtr hDesktop);
+
         [STAThread]
         static int Main(string[] args)
         {
+            IntPtr hDesk = OpenInputDesktop(0, false, 0x01FF);
+            if (hDesk != IntPtr.Zero)
+            {
+                SetThreadDesktop(hDesk);
+            }
             Console.WriteLine("==================================================");
             Console.WriteLine("  VEOFLOW REAL NOTEPAD INJECTION VERIFICATION   ");
             Console.WriteLine("==================================================");
@@ -98,10 +109,23 @@ namespace VeoFlow.Verification
 
             Console.WriteLine(string.Format("[3] Real Notepad Window Found -> PID: {0}, HWND: 0x{1:X}", notepadPid, notepadHwnd.ToInt64()));
 
-            // Bring Notepad to foreground
+            // Bring Notepad to foreground using thread attachment
+            uint fgPid;
+            uint fgThread = GetWindowThreadProcessId(GetForegroundWindow(), out fgPid);
+            uint curThread = GetCurrentThreadId();
+            if (fgThread != 0 && fgThread != curThread)
+            {
+                AttachThreadInput(curThread, fgThread, true);
+            }
+
             ShowWindow(notepadHwnd, 9); // SW_RESTORE
-            SwitchToThisWindow(notepadHwnd, true);
             SetForegroundWindow(notepadHwnd);
+            SwitchToThisWindow(notepadHwnd, true);
+
+            if (fgThread != 0 && fgThread != curThread)
+            {
+                AttachThreadInput(curThread, fgThread, false);
+            }
 
             try
             {
@@ -158,6 +182,21 @@ namespace VeoFlow.Verification
             Console.WriteLine("    <- HELPER: " + readyLine);
 
             // 5. Query active context
+            uint fgPidNow;
+            uint fgThNow = GetWindowThreadProcessId(GetForegroundWindow(), out fgPidNow);
+            uint curTh = GetCurrentThreadId();
+            if (fgThNow != 0 && fgThNow != curTh)
+            {
+                AttachThreadInput(curTh, fgThNow, true);
+            }
+            SetForegroundWindow(notepadHwnd);
+            SwitchToThisWindow(notepadHwnd, true);
+            if (fgThNow != 0 && fgThNow != curTh)
+            {
+                AttachThreadInput(curTh, fgThNow, false);
+            }
+            Thread.Sleep(300);
+
             string ctxReq = "{\"id\":\"req_ctx_1\",\"action\":\"get_context\"}";
             Console.WriteLine("    -> SEND: " + ctxReq);
             helper.StandardInput.WriteLine(ctxReq);

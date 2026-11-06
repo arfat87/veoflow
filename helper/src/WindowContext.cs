@@ -55,6 +55,7 @@ namespace VeoFlow.Helper
 
             try
             {
+                NativeMethods.EnsureAttachedToInputDesktop();
                 IntPtr hWnd = NativeMethods.GetForegroundWindow();
                 if (hWnd != IntPtr.Zero)
                 {

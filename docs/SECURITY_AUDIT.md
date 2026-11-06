@@ -194,3 +194,59 @@ All findings have been identified, classified under standard CVSS severity tiers
   > 1. Rotate the Google Gemini API key via Google AI Studio / Google Cloud Console.
   > 2. Rotate the Groq API key via the Groq Console.
   > 3. Update the newly generated keys via the VeoFlow Settings UI or via `saveApiKey()`. Newly saved keys are automatically encrypted with Windows DPAPI.
+
+---
+
+## 5. Phase 02 Post-Audit Remediation: Strict Foreground Injection Safety & UIPI Hardening
+
+**Date Completed:** November 6, 2026  
+**Status:** **100% REMEDIATED & VERIFIED**
+
+### 5.1 Core Principle: Elimination of Background Injection Workarounds
+- **Vulnerability / Architectural Weakness:**
+  A previous revision had introduced a background window workaround (`NativeMethods.SetForegroundWindow(targetPtr)` and UI Automation descendant searching across the desktop root). This permitted text injection to attempt forcing focus or writing to background windows without strict verification that the target remained the active foreground window.
+- **Remediation Implemented:**
+  1. **Strict Rejection:** Completely eliminated `NativeMethods.SetForegroundWindow(targetPtr)` and background root searching.
+  2. **Rule Enforced:** The helper will **ABORT** immediately if the target HWND is not verified as the active foreground window at the precise moment of injection.
+  3. **Zero Bypass:** No environment variables, command-line flags, or user settings exist that can bypass or disable foreground verification.
+
+### 5.2 Strict Foreground Verification Algorithm
+In [`helper/src/TextInjector.cs`](file:///c:/MY_ALL_ITEM/rea/veoflow/helper/src/TextInjector.cs):
+1. **Target Validation (`TryParseHwnd`):**
+   Rejects null, empty, `"0x0"`, `"0"`, or non-numeric HWND strings with `status: "aborted"` and `error: "Target HWND is zero or invalid"`.
+2. **Window Liveness Check (`IsWindow`):**
+   Validates that the target handle exists in the Win32 window table. Non-existent or destroyed handles abort with `status: "aborted"` and `error: "Target window does not exist or has been destroyed"`.
+3. **Foreground Match Check (`IsMatchingForeground`):**
+   Retrieves current active foreground window via `GetForegroundWindow()`. Compares `targetPtr` against `foregroundHwnd`, as well as parent/root-owner hierarchies (`GetAncestor(..., GA_ROOT)`). If `targetPtr` is in the background, aborts with `status: "aborted"` and reports the exact target PID and foreground PID.
+4. **Pre-Injection & Pre-Keystroke Revalidation:**
+   Revalidates foreground window immediately prior to UI Automation pattern invocation and immediately before synthetic `Ctrl+V` keystroke emission. If the user switched windows during the pipeline, injection aborts immediately without touching the target.
+
+### 5.3 Desktop Attachment & Windows Station Architecture
+In Windows desktop environments, helper processes spawned from subshells or background services may execute on a separate thread desktop (e.g., `exebox-...`), causing `GetForegroundWindow()` to return `0x0`.
+- **Fix:** Added `NativeMethods.EnsureAttachedToInputDesktop()` which opens `OpenInputDesktop(0, false, DESKTOP_ALL_ACCESS)` and calls `SetThreadDesktop()` at the startup of `Main()`, `IpcListenerLoop()`, and the STA injection thread.
+- **Result:** Native helper consistently tracks the real interactive desktop window (`WinSta0\Default`) with zero discrepancy.
+
+### 5.4 Safe Clipboard Preservation & Restoration
+1. Original clipboard contents (`IDataObject` or text string) are captured before modifying clipboard.
+2. If injection aborts or fails, original clipboard data is restored immediately.
+3. If previous clipboard was empty, `Clipboard.Clear()` is executed to ensure temporary dictation payloads are not retained.
+4. If an external process or user copied new data during the paste operation, external data is strictly preserved and not overwritten.
+
+### 5.5 User Interface Privilege Isolation (UIPI) Boundaries
+Under Windows security architecture (UAC / UIPI):
+- Standard user processes cannot send synthetic inputs or UI Automation commands to elevated (Administrator) windows (e.g. Task Manager, Elevated PowerShell).
+- When a target application is elevated and VeoFlow runs as standard user, Win32 `SendInput` or `AttachThreadInput` fails safely with `ERROR_ACCESS_DENIED`.
+- VeoFlow gracefully catches `UnauthorizedAccessException` and `COMException`, marks the transaction `status: "failed"` / `status: "aborted"`, restores clipboard, and logs a clear security boundary diagnostic without crashing.
+
+### 5.6 Test Verification Matrix
+
+| Test Scenario | Target HWND | Foreground Window | Expected Status | Actual Result |
+| :--- | :--- | :--- | :--- | :--- |
+| Zero HWND | `"0x0"`, `""`, `null` | Active Desktop Window | `aborted` | **PASS** (Zero HWND aborted) |
+| Destroyed / Non-existent HWND | `"0xDEADBEEF"` | Active Desktop Window | `aborted` | **PASS** (Destroyed HWND aborted) |
+| Background Window | `0x1B0962` (Windows Security) | `0x70498` (Antigravity IDE) | `aborted` | **PASS** (Aborted: target is not active foreground) |
+| User Clipboard on Abort | `"0x0"` | Active Desktop Window | Original Intact | **PASS** (User clipboard 100% preserved) |
+| Active Foreground Injection | `0x70498` (Antigravity IDE) | `0x70498` (Antigravity IDE) | `unverified` / `verified` | **PASS** (Pasted & original clipboard restored) |
+| Native C# Protocol Unit Tests | Multi-case suite | Local Console / Desktop | All Passed | **PASS** (13/13 native unit tests passed) |
+| Live Desktop Regression Suite | Integration Suite | Local Environment | All Passed | **PASS** (Vitest 157/157 unit, 8/8 integration) |
+

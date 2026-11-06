@@ -12,6 +12,8 @@ dist_release/
 
 # C# / Visual Studio
 helper/obj/
+helper/bin/TestRunner.exe
+scripts/get_window_hwnd.exe
 *.user
 *.suo
 *.pdb
