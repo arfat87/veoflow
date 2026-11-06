@@ -162,21 +162,22 @@ Click the gear icon on the floating HUD or right-click the system tray icon and 
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/veoflow/veoflow.git
+git clone https://github.com/arfat87/veoflow.git
 cd veoflow
 
 # 2. Install Node dependencies
 npm install
 
-# 3. Compile C# Native Helper (VeoFlowHelper.exe)
-cd helper
-build.bat
-cd ..
+# 3. Lint codebase
+npm run lint
 
-# 4. Compile Frontend Views via Vite
+# 4. Compile C# Native Helper (VeoFlowHelper.exe)
+npm run build:helper
+
+# 5. Compile Frontend Views via Vite
 npm run build:views
 
-# 5. Build Distribution Binaries (NSIS Setup & Portable)
+# 6. Build Distribution Binaries (NSIS Setup & Portable)
 npm run build:package
 ```
 
@@ -192,21 +193,20 @@ Production artifacts will be generated in the [`dist_release/`](dist_release/) d
 VeoFlow includes an extensive automated test suite covering unit tests, provider adapters, database operations, IPC integration, native helper behavior, and end-to-end failure scenarios:
 
 ```bash
-# Run full Vitest regression suite (22 test suites, 211 tests)
+# Run full Vitest regression suite (22 test suites, 219 tests)
 npm test
 
-# Run C# Native Helper test suite (9 test suites)
-cmd /c "helper\tests\run_tests.bat"
+# Run C# Native Helper test suite (13 test suites)
+npm run test:helper
 
-# Run Real Windows Notepad UI Automation verification test
-csc.exe /lib:C:\Windows\Microsoft.NET\Framework64\v4.0.30319\WPF ... scripts\RealNotepadVerification.cs
-scripts\RealNotepadVerification.exe
+# Run Real Windows Desktop Application Acceptance suite
+node scripts/verify_real_desktop_apps.js
 ```
 
 ### Test Verification Status
-* **Automated Vitest Suite:** 22/22 test files passed, 211/211 tests passed (100%).
-* **C# Native Helper Tests:** 9/9 passed.
-* **Real Notepad Injection Audit:** Verified physical text rendering via UI Automation `TextPattern` & `ValuePattern` with complete clipboard canary restoration.
+* **Automated Vitest Suite:** 22/22 test files passed, 219/219 tests passed (100%).
+* **C# Native Helper Tests:** 13/13 unit tests passed (100%).
+* **Real Desktop Application Acceptance:** Verified active foreground focus validation, text injection, and 100% clipboard canary restoration across live Windows applications (Notepad, VS Code, Chrome).
 * **Live Provider Audit:** Verified live transcription request against Groq `whisper-large-v3-turbo` with sub-2-second end-to-end network latency.
 
 For detailed audit logs, see the [QA Report](docs/QA_REPORT.md) and [Performance Report](docs/PERFORMANCE_REPORT.md).

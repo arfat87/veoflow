@@ -96,7 +96,7 @@ VeoFlow is 100% reproducible and can be built from source using standard tools:
 ### Build Steps:
 ```bash
 # 1. Clone repository
-git clone https://github.com/veoflow/veoflow.git
+git clone https://github.com/arfat87/veoflow.git
 cd veoflow
 
 # 2. Install dependencies

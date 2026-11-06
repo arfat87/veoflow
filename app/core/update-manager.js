@@ -20,7 +20,7 @@ export class UntrustedUpdateError extends Error {
 export class UpdateManager {
   constructor(options = {}) {
     this.currentVersion = options.currentVersion || (app ? app.getVersion() : '1.0.0');
-    this.releaseManifestUrl = options.releaseManifestUrl || 'https://api.github.com/repos/veoflow/veoflow/releases/latest';
+    this.releaseManifestUrl = options.releaseManifestUrl || 'https://api.github.com/repos/arfat87/veoflow/releases/latest';
     this.trustedPublisher = options.trustedPublisher || 'CN=VeoFlow Team';
     this.trustedCertificateThumbprint = options.trustedThumbprint || null;
   }

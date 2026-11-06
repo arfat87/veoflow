@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-and-test:
+    name: Build & Test (Windows x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Build Native C# Helper
+        run: npm run build:helper
+
+      - name: Run Native Helper Unit Tests
+        run: cmd.exe /c helper\tests\run_tests.bat
+
+      - name: Run Vitest Unit & Integration Tests
+        run: npm test
+
+      - name: Build Renderer Assets
+        run: npm run build:renderer
+
+      - name: Validate Unpacked Electron Package
+        run: npx electron-builder --win --x64 --dir
+

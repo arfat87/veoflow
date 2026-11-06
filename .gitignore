@@ -11,11 +11,10 @@ dist_release_candidate/
 !build/icon.ico
 !build/icon.png
 
-# C# / Visual Studio
+# C# / Visual Studio & Generated Binaries
 helper/obj/
-helper/bin/TestRunner.exe
-scripts/get_window_hwnd.exe
-scripts/inspect_notepad.exe
+helper/bin/
+scripts/*.exe
 *.user
 *.suo
 *.pdb

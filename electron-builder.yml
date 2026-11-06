@@ -49,6 +49,6 @@ portable:
 
 publish:
   provider: github
-  owner: veoflow
+  owner: arfat87
   repo: veoflow
 
