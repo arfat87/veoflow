@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 class Program
 {
@@ -12,6 +13,12 @@ class Program
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    static extern int GetClassName(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
     [DllImport("user32.dll")]
     static extern bool IsWindowVisible(IntPtr hWnd);
@@ -29,6 +36,56 @@ class Program
     {
         IntPtr hDesk = OpenInputDesktop(0, false, 0x01FF);
         if (hDesk != IntPtr.Zero) SetThreadDesktop(hDesk);
+
+        if (args.Length >= 2 && args[0] == "--find")
+        {
+            string targetName = args[1].ToLower();
+            IntPtr found = IntPtr.Zero;
+
+            for (int retry = 0; retry < 30; retry++)
+            {
+                EnumWindows((hWnd, lParam) =>
+                {
+                    var cls = new StringBuilder(256);
+                    GetClassName(hWnd, cls, 256);
+
+                    var title = new StringBuilder(256);
+                    GetWindowText(hWnd, title, 256);
+
+                    if (cls.ToString().Equals("Notepad", StringComparison.OrdinalIgnoreCase) ||
+                        cls.ToString().ToLower().Contains(targetName) ||
+                        title.ToString().ToLower().Contains(targetName))
+                    {
+                        found = hWnd;
+                        return false; // Found match
+                    }
+
+                    uint pid = 0;
+                    GetWindowThreadProcessId(hWnd, out pid);
+                    try
+                    {
+                        string procName = Process.GetProcessById((int)pid).ProcessName.ToLower();
+                        if (procName.Contains(targetName))
+                        {
+                            found = hWnd;
+                            return false;
+                        }
+                    }
+                    catch { }
+
+                    return true;
+                }, IntPtr.Zero);
+
+                if (found != IntPtr.Zero) break;
+                Thread.Sleep(200);
+            }
+
+            if (found != IntPtr.Zero)
+            {
+                Console.WriteLine("0x" + found.ToInt64().ToString("X"));
+            }
+            return;
+        }
 
         IntPtr fg = GetForegroundWindow();
         IntPtr backgroundHwnd = IntPtr.Zero;

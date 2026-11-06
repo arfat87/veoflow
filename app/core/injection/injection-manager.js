@@ -78,12 +78,11 @@ export class InjectionManager {
       });
 
       // 4. Update Audit Record
-      let finalStatus = TRANSACTION_STATUSES.INSERTED;
+      // Rule: Failed or unverified insertion must NEVER be reported as INSERTED
+      let finalStatus = TRANSACTION_STATUSES.UNVERIFIED;
       if (helperRes.verified) {
         finalStatus = TRANSACTION_STATUSES.VERIFIED;
-      } else if (helperRes.success) {
-        finalStatus = TRANSACTION_STATUSES.UNVERIFIED;
-      } else {
+      } else if (!helperRes.success) {
         finalStatus = TRANSACTION_STATUSES.FAILED;
       }
 

@@ -119,6 +119,7 @@ export class TransactionTracker {
       try {
         this.db.updateInsertionTransaction(id, {
           status: tx.status,
+          strategy: tx.strategy,
           errorMessage: tx.error,
           completedAt: new Date().toISOString()
         });

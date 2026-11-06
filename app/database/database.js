@@ -469,14 +469,23 @@ export class DatabaseManager {
     );
   }
 
-  updateInsertionTransaction(transactionId, { status, errorMessage = null, completedAt = null }) {
+  updateInsertionTransaction(transactionId, { status, strategy = null, errorMessage = null, completedAt = null }) {
     const now = completedAt || new Date().toISOString();
-    this.driver.run(
-      `UPDATE insertion_transactions
-       SET status = ?, error_message = ?, completed_at = ?
-       WHERE transaction_id = ?;`,
-      [status, errorMessage, now, transactionId]
-    );
+    if (strategy) {
+      this.driver.run(
+        `UPDATE insertion_transactions
+         SET status = ?, strategy = ?, error_message = ?, completed_at = ?
+         WHERE transaction_id = ?;`,
+        [status, strategy, errorMessage, now, transactionId]
+      );
+    } else {
+      this.driver.run(
+        `UPDATE insertion_transactions
+         SET status = ?, error_message = ?, completed_at = ?
+         WHERE transaction_id = ?;`,
+        [status, errorMessage, now, transactionId]
+      );
+    }
   }
 
   getTransaction(transactionId) {
