@@ -33,6 +33,7 @@ export class DatabaseManager {
 
     this.migrateFromLegacyJson();
     this.initDefaults();
+    this.migrateCredentials();
     this.enforceRetentionPolicy();
   }
 
@@ -74,9 +75,15 @@ export class DatabaseManager {
   setDefaultSetting(key, defaultValue) {
     const existing = this.driver.queryOne('SELECT value FROM settings WHERE key = ?;', [key]);
     if (!existing) {
+      let storedValue = String(defaultValue ?? '');
+      if (key.endsWith('_api_key') && storedValue.trim()) {
+        if (!storedValue.startsWith('dpapi:') && !storedValue.startsWith('dpapi-win:')) {
+          storedValue = credentialManager.encryptSync(storedValue.trim());
+        }
+      }
       this.driver.run(
         'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?);',
-        [key, String(defaultValue), new Date().toISOString()]
+        [key, storedValue, new Date().toISOString()]
       );
     }
   }
@@ -113,22 +120,46 @@ export class DatabaseManager {
     if (!row || row.value === null) return null;
     const val = row.value;
 
-    if (key.endsWith('_api_key') && val) {
-      if (val.startsWith('dpapi:') || val.startsWith('aes:')) {
+    if (key.endsWith('_api_key') && val && val.trim()) {
+      if (val.startsWith('dpapi:') || val.startsWith('dpapi-win:')) {
         try {
           return credentialManager.decryptSync(val);
-        } catch {
-          return val;
+        } catch (err) {
+          console.error(`[Database] Failed to decrypt ${key}: ${err.message}`);
+          return '';
+        }
+      } else if (val.startsWith('aes:')) {
+        // Legacy AES: decrypt and immediately migrate to DPAPI at rest
+        try {
+          const decrypted = credentialManager.decryptLegacyAes(val);
+          if (decrypted && decrypted.trim()) {
+            const reEncrypted = credentialManager.encryptSync(decrypted.trim());
+            this.driver.run('UPDATE settings SET value = ?, updated_at = ? WHERE key = ?;', [
+              reEncrypted,
+              new Date().toISOString(),
+              key
+            ]);
+            return decrypted.trim();
+          }
+          return '';
+        } catch (err) {
+          console.error(`[Database] Failed to migrate legacy AES ${key}: ${err.message}`);
+          return '';
         }
       } else {
         // Plaintext key detected: auto-encrypt at rest with DPAPI
-        const encrypted = credentialManager.encryptSync(val);
-        this.driver.run('UPDATE settings SET value = ?, updated_at = ? WHERE key = ?;', [
-          encrypted,
-          new Date().toISOString(),
-          key
-        ]);
-        return val;
+        try {
+          const encrypted = credentialManager.encryptSync(val.trim());
+          this.driver.run('UPDATE settings SET value = ?, updated_at = ? WHERE key = ?;', [
+            encrypted,
+            new Date().toISOString(),
+            key
+          ]);
+          return val.trim();
+        } catch (err) {
+          console.error(`[Database] Failed to auto-encrypt plaintext ${key}: ${err.message}`);
+          return val.trim();
+        }
       }
     }
 
@@ -155,10 +186,10 @@ export class DatabaseManager {
   }
 
   setSetting(key, value) {
-    let storedValue = String(value);
-    if (key.endsWith('_api_key') && storedValue) {
-      if (!storedValue.startsWith('dpapi:') && !storedValue.startsWith('aes:')) {
-        storedValue = credentialManager.encryptSync(storedValue);
+    let storedValue = String(value ?? '');
+    if (key.endsWith('_api_key') && storedValue.trim()) {
+      if (!storedValue.startsWith('dpapi:') && !storedValue.startsWith('dpapi-win:')) {
+        storedValue = credentialManager.encryptSync(storedValue.trim());
       }
     }
     this.driver.run(
@@ -170,7 +201,12 @@ export class DatabaseManager {
   saveApiKey(provider, apiKey) {
     const prov = (provider || '').toLowerCase().trim();
     const cleanKey = (apiKey || '').trim();
-    const encrypted = credentialManager.encryptSync(cleanKey);
+    if (!cleanKey) {
+      return this.clearApiKey(prov);
+    }
+    const encrypted = (cleanKey.startsWith('dpapi:') || cleanKey.startsWith('dpapi-win:'))
+      ? cleanKey
+      : credentialManager.encryptSync(cleanKey);
     const now = new Date().toISOString();
 
     // 1. Update settings table
@@ -206,12 +242,38 @@ export class DatabaseManager {
     // 2. Try provider_configs table
     const row = this.driver.queryOne('SELECT api_key_encrypted FROM provider_configs WHERE provider_id = ?;', [prov]);
     if (row && row.api_key_encrypted) {
-      try {
-        return credentialManager.decryptSync(row.api_key_encrypted);
-      } catch {}
+      const encryptedVal = row.api_key_encrypted.trim();
+      if (encryptedVal.startsWith('dpapi:') || encryptedVal.startsWith('dpapi-win:')) {
+        try {
+          return credentialManager.decryptSync(encryptedVal);
+        } catch {}
+      } else if (encryptedVal.startsWith('aes:')) {
+        try {
+          const decrypted = credentialManager.decryptLegacyAes(encryptedVal);
+          if (decrypted && decrypted.trim()) {
+            const reEnc = credentialManager.encryptSync(decrypted.trim());
+            this.driver.run('UPDATE provider_configs SET api_key_encrypted = ?, updated_at = ? WHERE provider_id = ?;', [
+              reEnc,
+              new Date().toISOString(),
+              prov
+            ]);
+            return decrypted.trim();
+          }
+        } catch {}
+      } else {
+        try {
+          const reEnc = credentialManager.encryptSync(encryptedVal);
+          this.driver.run('UPDATE provider_configs SET api_key_encrypted = ?, updated_at = ? WHERE provider_id = ?;', [
+            reEnc,
+            new Date().toISOString(),
+            prov
+          ]);
+        } catch {}
+        return encryptedVal;
+      }
     }
 
-    // 3. Fallback to process.env
+    // 3. Fallback to process.env (in-memory only)
     const envKey = process.env[`${prov.toUpperCase()}_API_KEY`];
     return envKey ? envKey.trim() : '';
   }
@@ -679,6 +741,12 @@ export class DatabaseManager {
 
   setProviderConfig(providerId, config = {}) {
     const now = new Date().toISOString();
+    let encKey = config.api_key_encrypted || null;
+    if (encKey && typeof encKey === 'string' && encKey.trim()) {
+      if (!encKey.startsWith('dpapi:') && !encKey.startsWith('dpapi-win:')) {
+        encKey = credentialManager.encryptSync(encKey.trim());
+      }
+    }
     this.driver.run(
       `INSERT OR REPLACE INTO provider_configs (
         provider_id, stt_model, llm_model, api_key_encrypted,
@@ -688,7 +756,7 @@ export class DatabaseManager {
         providerId,
         config.stt_model || 'default',
         config.llm_model || 'default',
-        config.api_key_encrypted || null,
+        encKey,
         config.is_enabled !== false ? 1 : 0,
         config.custom_endpoint || null,
         Number(config.timeout_ms) || 15000,
@@ -789,9 +857,15 @@ export class DatabaseManager {
       if (existingSettings[0]?.total === 0 && parsed.settings) {
         this.driver.transaction((d) => {
           for (const [k, v] of Object.entries(parsed.settings)) {
+            let stored = String(v ?? '');
+            if (k.endsWith('_api_key') && stored.trim()) {
+              if (!stored.startsWith('dpapi:') && !stored.startsWith('dpapi-win:')) {
+                stored = credentialManager.encryptSync(stored.trim());
+              }
+            }
             d.run(
               'INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?);',
-              [k, String(v), new Date().toISOString()]
+              [k, stored, new Date().toISOString()]
             );
           }
         });
@@ -866,6 +940,100 @@ export class DatabaseManager {
       }
     } catch (err) {
       console.warn('[Database] Failed to migrate legacy store:', err.message);
+    }
+  }
+
+  /**
+   * Scans and migrates all credentials stored in SQLite to secure Windows DPAPI.
+   * Migrates:
+   * 1. Plaintext API keys in `settings` table.
+   * 2. Legacy `aes:` encrypted keys in `settings` table.
+   * 3. Plaintext and legacy `aes:` keys in `provider_configs` table.
+   * Ensures that no plaintext or weak AES keys remain persisted on disk.
+   */
+  migrateCredentials() {
+    try {
+      // 1. Migrate settings table
+      const keyRows = this.driver.query("SELECT key, value FROM settings WHERE key LIKE '%_api_key' AND value IS NOT NULL AND value != '';");
+      for (const row of keyRows) {
+        const val = String(row.value).trim();
+        if (!val) continue;
+
+        if (val.startsWith('dpapi:') || val.startsWith('dpapi-win:')) {
+          // Already securely encrypted with DPAPI
+          continue;
+        }
+
+        if (val.startsWith('aes:')) {
+          try {
+            const decrypted = credentialManager.decryptLegacyAes(val);
+            if (decrypted && decrypted.trim()) {
+              const encrypted = credentialManager.encryptSync(decrypted.trim());
+              this.driver.run('UPDATE settings SET value = ?, updated_at = ? WHERE key = ?;', [
+                encrypted,
+                new Date().toISOString(),
+                row.key
+              ]);
+            }
+          } catch (err) {
+            console.warn(`[Database] Failed to migrate legacy AES setting for ${row.key}:`, err.message);
+          }
+        } else {
+          // Plaintext key: encrypt immediately with DPAPI
+          try {
+            const encrypted = credentialManager.encryptSync(val);
+            this.driver.run('UPDATE settings SET value = ?, updated_at = ? WHERE key = ?;', [
+              encrypted,
+              new Date().toISOString(),
+              row.key
+            ]);
+          } catch (err) {
+            console.warn(`[Database] Failed to migrate plaintext setting for ${row.key}:`, err.message);
+          }
+        }
+      }
+
+      // 2. Migrate provider_configs table
+      const provRows = this.driver.query("SELECT provider_id, api_key_encrypted FROM provider_configs WHERE api_key_encrypted IS NOT NULL AND api_key_encrypted != '';");
+      for (const row of provRows) {
+        const val = String(row.api_key_encrypted).trim();
+        if (!val) continue;
+
+        if (val.startsWith('dpapi:') || val.startsWith('dpapi-win:')) {
+          // Already securely encrypted
+          continue;
+        }
+
+        if (val.startsWith('aes:')) {
+          try {
+            const decrypted = credentialManager.decryptLegacyAes(val);
+            if (decrypted && decrypted.trim()) {
+              const encrypted = credentialManager.encryptSync(decrypted.trim());
+              this.driver.run('UPDATE provider_configs SET api_key_encrypted = ?, updated_at = ? WHERE provider_id = ?;', [
+                encrypted,
+                new Date().toISOString(),
+                row.provider_id
+              ]);
+            }
+          } catch (err) {
+            console.warn(`[Database] Failed to migrate legacy AES provider_config for ${row.provider_id}:`, err.message);
+          }
+        } else {
+          // Plaintext key
+          try {
+            const encrypted = credentialManager.encryptSync(val);
+            this.driver.run('UPDATE provider_configs SET api_key_encrypted = ?, updated_at = ? WHERE provider_id = ?;', [
+              encrypted,
+              new Date().toISOString(),
+              row.provider_id
+            ]);
+          } catch (err) {
+            console.warn(`[Database] Failed to migrate plaintext provider_config for ${row.provider_id}:`, err.message);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Database] Credential migration error:', err.message);
     }
   }
 

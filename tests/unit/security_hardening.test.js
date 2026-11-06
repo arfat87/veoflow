@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import { credentialManager, CredentialManager } from '../../app/security/credential-manager.js';
 import { redactSecrets } from '../../app/shared/logger.js';
 import { DatabaseManager } from '../../app/database/database.js';
@@ -28,15 +29,24 @@ describe('Phase 10: Security, Privacy & DPAPI Credential Hardening', () => {
   });
 
   describe('1. Credential Protection & DPAPI Simulation', () => {
-    it('encrypts and decrypts API keys deterministically', async () => {
+    it('encrypts and decrypts API keys deterministically using Windows DPAPI', async () => {
       const rawSecret = 'sk-proj-secret_key_1234567890abcdef1234';
       const ciphertext = await credentialManager.encrypt(rawSecret);
 
       expect(ciphertext).not.toBe(rawSecret);
-      expect(ciphertext.startsWith('aes:') || ciphertext.startsWith('dpapi:')).toBe(true);
+      // New encryptions MUST be DPAPI-backed (dpapi: or dpapi-win:) and NEVER weak AES (aes:)
+      expect(ciphertext.startsWith('dpapi:') || ciphertext.startsWith('dpapi-win:')).toBe(true);
+      expect(ciphertext.startsWith('aes:')).toBe(false);
 
       const decrypted = await credentialManager.decrypt(ciphertext);
       expect(decrypted).toBe(rawSecret);
+    });
+
+    it('refuses to persist secrets when secure encryption is unavailable', () => {
+      const mgr = new CredentialManager();
+      mgr.encryptionDisabledForTest = true;
+
+      expect(() => mgr.encryptSync('my-super-secret-key')).toThrow('SecureStorageUnavailableError');
     });
 
     it('returns empty string when encrypting or decrypting empty/null values', async () => {
@@ -94,17 +104,19 @@ describe('Phase 10: Security, Privacy & DPAPI Credential Hardening', () => {
   });
 
   describe('3. Database Zero Secrets Exposure & DPAPI Encryption', () => {
-    it('stores API keys encrypted in settings and provider_configs', () => {
+    it('stores API keys encrypted in settings and provider_configs using DPAPI', () => {
       db.saveApiKey('groq', 'gsk_prod_testing_key_1234567890');
 
       // Direct driver query checks raw DB storage
       const rawSetting = db.driver.queryOne("SELECT value FROM settings WHERE key = 'groq_api_key';");
       expect(rawSetting.value).not.toBe('gsk_prod_testing_key_1234567890');
-      expect(rawSetting.value.startsWith('aes:') || rawSetting.value.startsWith('dpapi:')).toBe(true);
+      expect(rawSetting.value.startsWith('dpapi:') || rawSetting.value.startsWith('dpapi-win:')).toBe(true);
+      expect(rawSetting.value.startsWith('aes:')).toBe(false);
 
       const rawConfig = db.driver.queryOne("SELECT api_key_encrypted FROM provider_configs WHERE provider_id = 'groq';");
       expect(rawConfig.api_key_encrypted).not.toBe('gsk_prod_testing_key_1234567890');
-      expect(rawConfig.api_key_encrypted.startsWith('aes:') || rawConfig.api_key_encrypted.startsWith('dpapi:')).toBe(true);
+      expect(rawConfig.api_key_encrypted.startsWith('dpapi:') || rawConfig.api_key_encrypted.startsWith('dpapi-win:')).toBe(true);
+      expect(rawConfig.api_key_encrypted.startsWith('aes:')).toBe(false);
 
       // Decrypted accessor returns raw secret safely for internal services
       expect(db.getApiKey('groq')).toBe('gsk_prod_testing_key_1234567890');
@@ -140,6 +152,57 @@ describe('Phase 10: Security, Privacy & DPAPI Credential Hardening', () => {
       db.clearApiKey('openai');
       expect(db.hasApiKey('openai')).toBe(false);
       expect(db.getApiKey('openai')).toBe('');
+    });
+
+    it('automatically migrates plaintext API keys on startup to DPAPI', () => {
+      // Force write a plaintext key into the raw settings table
+      db.driver.run("UPDATE settings SET value = 'AIzaSy_plaintext_legacy_unencrypted' WHERE key = 'gemini_api_key';");
+
+      // Verify it was raw in DB
+      const beforeRow = db.driver.queryOne("SELECT value FROM settings WHERE key = 'gemini_api_key';");
+      expect(beforeRow.value).toBe('AIzaSy_plaintext_legacy_unencrypted');
+
+      // Trigger migration (as happens on DatabaseManager initialization)
+      db.migrateCredentials();
+
+      // Verify the plaintext value has been removed and replaced with DPAPI ciphertext
+      const afterRow = db.driver.queryOne("SELECT value FROM settings WHERE key = 'gemini_api_key';");
+      expect(afterRow.value).not.toBe('AIzaSy_plaintext_legacy_unencrypted');
+      expect(afterRow.value.startsWith('dpapi:') || afterRow.value.startsWith('dpapi-win:')).toBe(true);
+      expect(afterRow.value.startsWith('aes:')).toBe(false);
+
+      // Verify decrypted getter still retrieves the exact original secret
+      expect(db.getApiKey('gemini')).toBe('AIzaSy_plaintext_legacy_unencrypted');
+    });
+
+    it('automatically migrates legacy AES keys on startup to DPAPI', () => {
+      // Create a legacy AES ciphertext using the old entropy scheme
+      const entropy = `${os.hostname()}:${os.userInfo().username || 'default'}:veoflow-local-storage-v1`;
+      const legacyKey = crypto.createHash('sha256').update(entropy).digest();
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv('aes-256-gcm', legacyKey, iv);
+      let enc = cipher.update('gsk_legacy_aes_key_value_to_migrate', 'utf8', 'base64');
+      enc += cipher.final('base64');
+      const tag = cipher.getAuthTag();
+      const legacyCiphertext = `aes:${iv.toString('hex')}:${tag.toString('hex')}:${enc}`;
+
+      // Insert into DB
+      db.driver.run("UPDATE settings SET value = ? WHERE key = 'groq_api_key';", [legacyCiphertext]);
+
+      // Verify legacy AES format is present
+      const beforeRow = db.driver.queryOne("SELECT value FROM settings WHERE key = 'groq_api_key';");
+      expect(beforeRow.value.startsWith('aes:')).toBe(true);
+
+      // Migrate
+      db.migrateCredentials();
+
+      // Verify migrated to DPAPI and no longer starts with aes:
+      const afterRow = db.driver.queryOne("SELECT value FROM settings WHERE key = 'groq_api_key';");
+      expect(afterRow.value.startsWith('aes:')).toBe(false);
+      expect(afterRow.value.startsWith('dpapi:') || afterRow.value.startsWith('dpapi-win:')).toBe(true);
+
+      // Decrypted secret matches
+      expect(db.getApiKey('groq')).toBe('gsk_legacy_aes_key_value_to_migrate');
     });
   });
 

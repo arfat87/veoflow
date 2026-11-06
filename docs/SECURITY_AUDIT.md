@@ -152,3 +152,45 @@ All findings have been identified, classified under standard CVSS severity tiers
   - `vitest`: MIT (Permissive)
   - `zod`: MIT (Permissive)
 - **Result:** 100% compliant with commercial and personal usage. Zero abandoned packages.
+
+---
+
+## 4. Phase 01 Post-Audit Remediation: Credential Security & DPAPI Migration
+
+**Date Completed:** November 6, 2026  
+**Status:** **100% REMEDIATED & VERIFIED**
+
+### 4.1 Plaintext API Key Storage Remediation (Issue A)
+- **Root Cause:**
+  `DatabaseManager.setDefaultSetting()` previously performed raw SQL inserts without checking if the setting key ended with `_api_key` or encrypting the default value. When environment variables such as `process.env.GEMINI_API_KEY` were defined, `initDefaults()` persisted them directly to SQLite in plaintext.
+- **Remediation:**
+  1. Updated `setDefaultSetting(key, defaultValue)` to automatically encrypt any non-empty `_api_key` values with Windows DPAPI before persisting to SQLite.
+  2. Updated `setSetting(key, value)`, `saveApiKey(provider, apiKey)`, and `setProviderConfig(providerId, config)` to enforce DPAPI encryption before storing secrets.
+  3. Added `DatabaseManager.migrateCredentials()` called automatically on database startup. It scans `settings` and `provider_configs`, converting any plaintext or legacy keys to DPAPI and immediately overwriting unencrypted records.
+
+### 4.2 Weak Machine-Bound AES Fallback Elimination (Issue B)
+- **Root Cause:**
+  The legacy fallback mechanism generated an encryption key using `crypto.createHash('sha256').update(`${os.hostname()}:${username}:veoflow-local-storage-v1`)`. Because hostname and username are public, predictable operating system attributes, this did not provide true cryptographic protection.
+- **Remediation:**
+  1. Completely removed weak AES key derivation for new encryptions.
+  2. Implemented dual Windows DPAPI support:
+     - Electron `safeStorage` (backed by Windows DPAPI via Chromium OSCrypt, prefix `dpapi:`).
+     - Native Windows DPAPI via `System.Security.Cryptography.ProtectedData` (`DataProtectionScope.CurrentUser`) over standard input (prefix `dpapi-win:`).
+  3. Enforced fail-safe behavior: if DPAPI is unavailable, `CredentialManager.encryptSync()` throws `SecureStorageUnavailableError` and refuses to persist credentials.
+  4. Retained legacy AES strictly in a decrypt-only capacity (`decryptLegacyAes`) exclusively for migrating pre-existing records to DPAPI.
+
+### 4.3 Credential Migration & Key Compromise Notice (Issue C)
+- **Database Migration Verification:**
+  The migration was executed against the local database (`%USERPROFILE%\.veoflow\veoflow.sqlite`). Verification confirmed:
+  - `gemini_api_key`: migrated from plaintext (length 53) to `dpapi-win:` (length 382).
+  - `groq_api_key`: migrated from `aes:` (length 138) to `dpapi-win:` (length 382).
+  - `openai_api_key`: empty.
+  - Zero plaintext and zero legacy AES keys remain in persistent storage.
+- **Compromise Notice & Rotation Advisory:**
+  > [!CAUTION]
+  > Because previous versions of the software may have stored `gemini_api_key` in plaintext and `groq_api_key` using a predictable machine-derived key, **any API keys used during development prior to Phase 01 must be treated as potentially compromised**.
+  > 
+  > **Recommended Actions:**
+  > 1. Rotate the Google Gemini API key via Google AI Studio / Google Cloud Console.
+  > 2. Rotate the Groq API key via the Groq Console.
+  > 3. Update the newly generated keys via the VeoFlow Settings UI or via `saveApiKey()`. Newly saved keys are automatically encrypted with Windows DPAPI.
