@@ -15,7 +15,7 @@
     "build:portable": "npm run build:helper && npm run build:renderer && electron-builder --win portable --x64",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "pretest": "npm run build:helper",
+    "pretest": "node -e \"const fs = require('fs'); const cp = require('child_process'); if (!fs.existsSync('helper/bin/VeoFlowHelper.exe')) cp.execSync('npm run build:helper', { stdio: 'inherit' });\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:helper": "cmd.exe /c helper\\tests\\run_tests.bat",
